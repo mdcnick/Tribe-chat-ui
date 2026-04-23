@@ -8,6 +8,7 @@ export type ClerkRequestAuth = {
 	isAuthenticated: boolean;
 	clerkUserId?: string;
 	clerkSessionId?: string;
+	sessionClaims?: Record<string, unknown>;
 };
 
 export const clerkEnabled =
@@ -66,6 +67,10 @@ export async function authenticateClerkRequest(
 			isAuthenticated: !!auth.userId,
 			clerkUserId: auth.userId ?? undefined,
 			clerkSessionId: auth.sessionId ?? undefined,
+			sessionClaims:
+				auth.sessionClaims && typeof auth.sessionClaims === "object"
+					? (auth.sessionClaims as Record<string, unknown>)
+					: undefined,
 		};
 	} catch (error) {
 		logger.warn(error, "Failed to authenticate Clerk request");
@@ -104,5 +109,40 @@ export function mapClerkUserProfile(user: ClerkUser) {
 		name,
 		email,
 		avatarUrl: user.imageUrl || undefined,
+	};
+}
+
+function getStringClaim(
+	claims: Record<string, unknown> | undefined,
+	...keys: string[]
+): string | undefined {
+	for (const key of keys) {
+		const value = claims?.[key];
+		if (typeof value === "string" && value.trim().length > 0) {
+			return value;
+		}
+	}
+	return undefined;
+}
+
+export function mapClerkSessionClaimsProfile(clerkUserId: string, claims?: Record<string, unknown>) {
+	const email = getStringClaim(claims, "email", "email_address");
+	const username = getStringClaim(claims, "username") ?? email?.split("@")[0] ?? undefined;
+	const name =
+		getStringClaim(claims, "name", "full_name") ??
+		([getStringClaim(claims, "first_name"), getStringClaim(claims, "last_name")]
+			.filter((part): part is string => !!part)
+			.join(" ") ||
+			username ||
+			email ||
+			clerkUserId);
+
+	return {
+		authProvider: "clerk" as const,
+		authSubject: clerkUserId,
+		username,
+		name,
+		email,
+		avatarUrl: getStringClaim(claims, "picture", "image_url", "avatar_url"),
 	};
 }

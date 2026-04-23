@@ -30,6 +30,24 @@ vi.mock("./clerk", () => ({
 		email: user.primaryEmailAddress?.emailAddress ?? user.emailAddresses?.[0]?.emailAddress,
 		avatarUrl: user.imageUrl,
 	}),
+	mapClerkSessionClaimsProfile: (
+		clerkUserId: string,
+		claims?: Record<string, unknown>
+	) => ({
+		authProvider: "clerk" as const,
+		authSubject: clerkUserId,
+		username:
+			(typeof claims?.username === "string" && claims.username) ||
+			(typeof claims?.email === "string" && claims.email.split("@")[0]) ||
+			undefined,
+		name:
+			(typeof claims?.name === "string" && claims.name) ||
+			(typeof claims?.username === "string" && claims.username) ||
+			(typeof claims?.email === "string" && claims.email) ||
+			clerkUserId,
+		email: typeof claims?.email === "string" ? claims.email : undefined,
+		avatarUrl: typeof claims?.picture === "string" ? claims.picture : undefined,
+	}),
 }));
 
 const { authenticateRequest } = await import("./auth");
@@ -55,6 +73,12 @@ describe("authenticateRequest with Clerk", () => {
 			isAuthenticated: true,
 			clerkUserId: "user_test_123",
 			clerkSessionId: "sess_test_123",
+			sessionClaims: {
+				email: "test@example.com",
+				username: "test-user",
+				name: "Test User",
+				picture: "https://example.com/avatar.png",
+			},
 		});
 		getClerkUserMock.mockResolvedValue({
 			id: "user_test_123",
@@ -94,6 +118,12 @@ describe("authenticateRequest with Clerk", () => {
 			isAuthenticated: true,
 			clerkUserId: "user_test_123",
 			clerkSessionId: "sess_test_123",
+			sessionClaims: {
+				email: "test@example.com",
+				username: "test-user",
+				name: "Test User",
+				picture: "https://example.com/avatar.png",
+			},
 		});
 		getClerkUserMock.mockResolvedValue({
 			id: "user_test_123",
@@ -128,5 +158,42 @@ describe("authenticateRequest with Clerk", () => {
 			.toArray();
 
 		expect(users).toHaveLength(1);
+	});
+
+	it("creates a Mongo user from Clerk session claims when getUser is unavailable", async () => {
+		authenticateClerkRequestMock.mockResolvedValue({
+			isAuthenticated: true,
+			clerkUserId: "user_claims_only",
+			clerkSessionId: "sess_claims_only",
+			sessionClaims: {
+				email: "claims@example.com",
+				username: "claims-user",
+				name: "Claims User",
+				picture: "https://example.com/claims-avatar.png",
+			},
+		});
+		getClerkUserMock.mockRejectedValue(new Error("missing secret key"));
+
+		const cookies = createCookiesMock();
+		const result = await authenticateRequest(
+			new Request("http://localhost/"),
+			cookies,
+			new URL("http://localhost/")
+		);
+
+		const storedUser = await collections.users.findOne({
+			authProvider: "clerk",
+			authSubject: "user_claims_only",
+		});
+
+		expect(storedUser).not.toBeNull();
+		expect(storedUser).toMatchObject({
+			authProvider: "clerk",
+			authSubject: "user_claims_only",
+			email: "claims@example.com",
+			username: "claims-user",
+			name: "Claims User",
+		});
+		expect(result.user?._id.toString()).toBe(storedUser?._id.toString());
 	});
 });

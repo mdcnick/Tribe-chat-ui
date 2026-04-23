@@ -9,7 +9,13 @@ import JSON5 from "json5";
 import { z } from "zod";
 import { collections } from "$lib/server/database";
 import { adminTokenManager } from "./adminToken";
-import { authenticateClerkRequest, clerkEnabled, getClerkUser, mapClerkUserProfile } from "./clerk";
+import {
+	authenticateClerkRequest,
+	clerkEnabled,
+	getClerkUser,
+	mapClerkSessionClaimsProfile,
+	mapClerkUserProfile,
+} from "./clerk";
 import { config } from "$lib/server/config";
 import { logger } from "$lib/server/logger";
 import type { User } from "$lib/types/User";
@@ -186,8 +192,19 @@ export async function authenticateRequest(
 
 	const clerkAuth = await authenticateClerkRequest(request, url);
 	if (clerkAuth.isAuthenticated && clerkAuth.clerkUserId) {
-		const clerkUser = await getClerkUser(clerkAuth.clerkUserId);
-		const profile = mapClerkUserProfile(clerkUser);
+		let profile = mapClerkSessionClaimsProfile(clerkAuth.clerkUserId, clerkAuth.sessionClaims);
+
+		if (config.CLERK_SECRET_KEY) {
+			try {
+				const clerkUser = await getClerkUser(clerkAuth.clerkUserId);
+				profile = mapClerkUserProfile(clerkUser);
+			} catch (err) {
+				logger.warn(
+					{ err, clerkUserId: clerkAuth.clerkUserId },
+					"Falling back to Clerk session claims because getUser() failed"
+				);
+			}
+		}
 
 		if (!isAllowedAuthenticatedEmail(profile.email)) {
 			logger.warn(
