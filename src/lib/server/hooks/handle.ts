@@ -85,9 +85,10 @@ export async function handleRequest({ event, resolve }: HandleInput): Promise<Re
 			}
 
 			const isApi = event.url.pathname.startsWith(`${base}/api/`);
-			const isStripeBillingWebhook =
-				event.url.pathname === `${base}/api/v2/billing/webhook` && event.request.method === "POST";
-			const auth = await authenticateRequest(event.request, event.cookies, event.url, isApi);
+		const isStripeBillingWebhook =
+			event.url.pathname === `${base}/api/v2/billing/webhook` && event.request.method === "POST";
+		const isMcpHealth = event.url.pathname === `${base}/api/mcp/health`;
+		const auth = await authenticateRequest(event.request, event.cookies, event.url, isApi);
 			const clerkRedirectLocation = auth.clerkResponseHeaders?.get("location");
 
 			if (clerkRedirectLocation) {
@@ -182,17 +183,18 @@ export async function handleRequest({ event, resolve }: HandleInput): Promise<Re
 				);
 			}
 
-			if (
-				loginEnabled &&
-				!event.locals.user &&
-				!isStripeBillingWebhook &&
-				!event.url.pathname.startsWith(`${base}/login`) &&
-				!event.url.pathname.startsWith(`${base}/admin`) &&
-				!event.url.pathname.startsWith(`${base}/settings`) &&
-				!["GET", "OPTIONS", "HEAD"].includes(event.request.method)
-			) {
-				return errorResponse(401, ERROR_MESSAGES.authOnly);
-			}
+		if (
+			loginEnabled &&
+			!event.locals.user &&
+			!isStripeBillingWebhook &&
+			!isMcpHealth &&
+			!event.url.pathname.startsWith(`${base}/login`) &&
+			!event.url.pathname.startsWith(`${base}/admin`) &&
+			!event.url.pathname.startsWith(`${base}/settings`) &&
+			!["GET", "OPTIONS", "HEAD"].includes(event.request.method)
+		) {
+			return errorResponse(401, ERROR_MESSAGES.authOnly);
+		}
 
 			let replaced = false;
 

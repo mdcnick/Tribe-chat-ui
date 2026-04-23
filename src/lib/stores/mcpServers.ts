@@ -321,6 +321,7 @@ export async function healthCheckServer(
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ url: server.url, headers: server.headers }),
+			credentials: "include",
 		});
 
 		const result = await response.json();
