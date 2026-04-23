@@ -13,6 +13,8 @@ export const GET: RequestHandler = async ({ locals }) => {
 					username: locals.user.username,
 					avatarUrl: locals.user.avatarUrl,
 					email: locals.user.email,
+					authProvider: locals.user.authProvider,
+					authSubject: locals.user.authSubject,
 					isAdmin: locals.user.isAdmin ?? false,
 					isEarlyAccess: locals.user.isEarlyAccess ?? false,
 					...(billing ? { billing } : {}),

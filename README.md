@@ -40,6 +40,18 @@ OPENAI_API_KEY=hf_************************
 
 Check the root [`.env` template](./.env) for the full list of optional variables you can override.
 
+Optional browser auth uses Clerk. Add these variables to `.env.local` when you want interactive sign-in with email/password and Google:
+
+```env
+PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_or_test_***
+CLERK_SECRET_KEY=sk_live_or_test_***
+CLERK_JWT_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+PUBLIC_CLERK_SIGN_IN_URL=https://accounts.example.com/sign-in
+PUBLIC_CLERK_SIGN_UP_URL=https://accounts.example.com/sign-up
+```
+
+MongoDB remains the application data store for users, sessions, conversations, settings, billing entitlements, and reports. Clerk only proves browser identity; the app still provisions its own Mongo `users` and `sessions` records on first authenticated request.
+
 **Step 2 – Install and launch the dev server:**
 
 ```bash

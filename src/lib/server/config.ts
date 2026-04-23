@@ -165,7 +165,12 @@ type ExtraConfigKeys =
 	| "STRIPE_SECRET_KEY"
 	| "STRIPE_WEBHOOK_SECRET"
 	| "STRIPE_PRICE_ID_PRO"
-	| "LLM_ROUTER_HERMES_MODEL";
+	| "LLM_ROUTER_HERMES_MODEL"
+	| "CLERK_SECRET_KEY"
+	| "CLERK_JWT_KEY"
+	| "PUBLIC_CLERK_PUBLISHABLE_KEY"
+	| "PUBLIC_CLERK_SIGN_IN_URL"
+	| "PUBLIC_CLERK_SIGN_UP_URL";
 
 type ConfigProxy = ConfigManager & { [K in ConfigKey | ExtraConfigKeys]: string };
 

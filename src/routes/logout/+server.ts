@@ -1,11 +1,21 @@
+import type { RequestHandler } from "./$types";
 import { dev } from "$app/environment";
 import { base } from "$app/paths";
+import { revokeClerkSession } from "$lib/server/clerk";
 import { collections } from "$lib/server/database";
 import { redirect } from "@sveltejs/kit";
 import { config } from "$lib/server/config";
 
-export async function POST({ locals, cookies }) {
+async function logout({ locals, cookies }: Parameters<RequestHandler>[0]) {
 	await collections.sessions.deleteOne({ sessionId: locals.sessionId });
+
+	if (locals.clerkAuth?.clerkSessionId) {
+		try {
+			await revokeClerkSession(locals.clerkAuth.clerkSessionId);
+		} catch {
+			// App logout still succeeds even if Clerk session revocation fails.
+		}
+	}
 
 	cookies.delete(config.COOKIE_NAME, {
 		path: "/",
@@ -15,4 +25,12 @@ export async function POST({ locals, cookies }) {
 		httpOnly: true,
 	});
 	return redirect(302, `${base}/`);
+}
+
+export async function POST(event) {
+	return logout(event);
+}
+
+export async function GET(event) {
+	return logout(event);
 }

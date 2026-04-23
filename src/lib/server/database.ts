@@ -269,7 +269,21 @@ export class Database {
 			.createIndex({ assistants: 1 })
 			.catch((e) => logger.error(e, "Error creating index for settings by assistants"));
 		users
-			.createIndex({ hfUserId: 1 }, { unique: true })
+			.createIndex(
+				{ authProvider: 1, authSubject: 1 },
+				{
+					unique: true,
+					partialFilterExpression: {
+						authProvider: { $exists: true },
+						authSubject: { $exists: true },
+					},
+				}
+			)
+			.catch((e) =>
+				logger.error(e, "Error creating index for users by authProvider and authSubject")
+			);
+		users
+			.createIndex({ hfUserId: 1 }, { unique: true, sparse: true })
 			.catch((e) => logger.error(e, "Error creating index for users by hfUserId"));
 		users
 			.createIndex({ sessionId: 1 }, { unique: true, sparse: true })

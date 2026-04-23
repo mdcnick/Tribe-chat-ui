@@ -6,7 +6,7 @@ import {
 	authenticateRequest,
 	loginEnabled,
 	refreshSessionCookie,
-	triggerOauthFlow,
+	triggerLoginFlow,
 } from "$lib/server/auth";
 import { ERROR_MESSAGES } from "$lib/stores/errors";
 import { addWeeks } from "date-fns";
@@ -77,12 +77,7 @@ export async function handleRequest({ event, resolve }: HandleInput): Promise<Re
 			const isApi = event.url.pathname.startsWith(`${base}/api/`);
 			const isStripeBillingWebhook =
 				event.url.pathname === `${base}/api/v2/billing/webhook` && event.request.method === "POST";
-			const auth = await authenticateRequest(
-				event.request.headers,
-				event.cookies,
-				event.url,
-				isApi
-			);
+			const auth = await authenticateRequest(event.request, event.cookies, event.url, isApi);
 
 			event.locals.sessionId = auth.sessionId;
 
@@ -95,7 +90,7 @@ export async function handleRequest({ event, resolve }: HandleInput): Promise<Re
 					) {
 						// To get the same CSRF token after callback
 						refreshSessionCookie(event.cookies, auth.secretSessionId);
-						return await triggerOauthFlow(event);
+						return await triggerLoginFlow(event);
 					}
 				} else {
 					// Redirect to OAuth flow unless on the authorized pages (home, shared conversation, login, healthcheck, model thumbnails)
@@ -111,13 +106,14 @@ export async function handleRequest({ event, resolve }: HandleInput): Promise<Re
 						!event.url.pathname.startsWith(`${base}/api`)
 					) {
 						refreshSessionCookie(event.cookies, auth.secretSessionId);
-						return triggerOauthFlow(event);
+						return triggerLoginFlow(event);
 					}
 				}
 			}
 
 			event.locals.user = auth.user || undefined;
 			event.locals.token = auth.token;
+			event.locals.clerkAuth = auth.clerkAuth;
 
 			// Update request context with user after authentication
 			if (auth.user?.username) {

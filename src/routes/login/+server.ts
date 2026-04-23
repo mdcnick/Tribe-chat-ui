@@ -1,5 +1,5 @@
-import { triggerOauthFlow } from "$lib/server/auth";
+import { triggerLoginFlow } from "$lib/server/auth";
 
 export async function GET(event) {
-	return await triggerOauthFlow(event);
+	return await triggerLoginFlow(event);
 }

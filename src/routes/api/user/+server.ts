@@ -6,7 +6,9 @@ export async function GET({ locals }) {
 			name: locals.user.name,
 			email: locals.user.email,
 			avatarUrl: locals.user.avatarUrl,
-			hfUserId: locals.user.hfUserId,
+			authProvider: locals.user.authProvider,
+			authSubject: locals.user.authSubject,
+			...(locals.user.hfUserId ? { hfUserId: locals.user.hfUserId } : {}),
 		};
 
 		return Response.json(res);

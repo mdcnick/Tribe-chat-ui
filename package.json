@@ -67,6 +67,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@clerk/backend": "^3.3.0",
 		"@huggingface/hub": "^2.2.0",
 		"@huggingface/inference": "^4.11.3",
 		"@iconify-json/bi": "^1.1.21",
@@ -88,7 +89,6 @@
 		"mongodb": "^5.8.0",
 		"nanoid": "^5.0.9",
 		"openai": "^4.44.0",
-		"openid-client": "^5.4.2",
 		"parquetjs": "^0.11.2",
 		"pino": "^9.0.0",
 		"pino-pretty": "^11.0.0",

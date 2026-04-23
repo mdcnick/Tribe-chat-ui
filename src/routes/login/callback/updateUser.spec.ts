@@ -1,38 +1,31 @@
 import { assert, it, describe, afterEach, vi, expect } from "vitest";
 import type { Cookies } from "@sveltejs/kit";
 import { collections } from "$lib/server/database";
-import { updateUser } from "./updateUser";
 import { ObjectId } from "mongodb";
 import { DEFAULT_SETTINGS } from "$lib/types/Settings";
 import { defaultModel } from "$lib/server/models";
 import { findUser } from "$lib/server/auth";
-import type { TokenSet } from "openid-client";
+import { syncAuthenticatedUser } from "$lib/server/syncAuthenticatedUser";
 
-const userData = {
-	preferred_username: "new-username",
+const profile = {
+	authProvider: "clerk" as const,
+	authSubject: "user_1234567890",
+	username: "new-username",
 	name: "name",
-	picture: "https://example.com/avatar.png",
-	sub: "1234567890",
+	email: "name@example.com",
+	avatarUrl: "https://example.com/avatar.png",
 };
-Object.freeze(userData);
+Object.freeze(profile);
 
-const locals = {
-	userId: "1234567890",
+const locals: App.Locals = {
 	sessionId: "1234567890",
 	isAdmin: false,
 };
 
-const token = {
-	access_token: "access_token",
-	refresh_token: "refresh_token",
-	expires_at: Math.floor(Date.now() / 1000) + 3600, // Expires 1 hour from now
-	expires_in: 3600,
-} as TokenSet;
-
-// @ts-expect-error SvelteKit cookies dumb mock
-const cookiesMock: Cookies = {
+const cookiesMock = {
 	set: vi.fn(),
-};
+	get: vi.fn(),
+} as unknown as Cookies;
 
 const insertRandomUser = async () => {
 	const res = await collections.users.insertOne({
@@ -40,9 +33,11 @@ const insertRandomUser = async () => {
 		createdAt: new Date(),
 		updatedAt: new Date(),
 		username: "base-username",
-		name: userData.name,
-		avatarUrl: userData.picture,
-		hfUserId: userData.sub,
+		name: profile.name,
+		email: profile.email,
+		avatarUrl: profile.avatarUrl,
+		authProvider: profile.authProvider,
+		authSubject: profile.authSubject,
 	});
 
 	return res.insertedId;
@@ -55,7 +50,6 @@ const insertRandomConversations = async (count: number) => {
 			title: "random title",
 			messages: [],
 			model: defaultModel.id,
-			// embedding model removed in this build
 			createdAt: new Date(),
 			updatedAt: new Date(),
 			sessionId: locals.sessionId,
@@ -65,16 +59,24 @@ const insertRandomConversations = async (count: number) => {
 	return res.insertedIds;
 };
 
-describe("login", () => {
+describe("authenticated user sync", () => {
 	it("should update user if existing", async () => {
 		await insertRandomUser();
 
-		await updateUser({ userData, locals, cookies: cookiesMock, token });
+		await syncAuthenticatedUser({
+			...profile,
+			locals,
+			cookies: cookiesMock,
+			currentSessionId: locals.sessionId,
+			currentSecretSessionId: locals.sessionId,
+		});
 
-		const existingUser = await collections.users.findOne({ hfUserId: userData.sub });
+		const existingUser = await collections.users.findOne({
+			authProvider: profile.authProvider,
+			authSubject: profile.authSubject,
+		});
 
-		assert.equal(existingUser?.name, userData.name);
-
+		assert.equal(existingUser?.name, profile.name);
 		expect(cookiesMock.set).toBeCalledTimes(1);
 	}, 30000);
 
@@ -83,7 +85,13 @@ describe("login", () => {
 
 		await insertRandomConversations(2);
 
-		await updateUser({ userData, locals, cookies: cookiesMock, token });
+		await syncAuthenticatedUser({
+			...profile,
+			locals,
+			cookies: cookiesMock,
+			currentSessionId: locals.sessionId,
+			currentSecretSessionId: locals.sessionId,
+		});
 
 		const conversationCount = await collections.conversations.countDocuments({
 			userId: insertedId,
@@ -96,10 +104,15 @@ describe("login", () => {
 	});
 
 	it("should create default settings for new user", async () => {
-		await updateUser({ userData, locals, cookies: cookiesMock, token });
+		await syncAuthenticatedUser({
+			...profile,
+			locals,
+			cookies: cookiesMock,
+			currentSessionId: locals.sessionId,
+			currentSecretSessionId: locals.sessionId,
+		});
 
-		// updateUser creates a new sessionId, so we need to use the updated value
-		const user = (await findUser(locals.sessionId, undefined, new URL("http://localhost"))).user;
+		const user = (await findUser(locals.sessionId, undefined)).user;
 
 		assert.exists(user);
 
@@ -124,7 +137,13 @@ describe("login", () => {
 			shareConversationsWithModelAuthors: false,
 		});
 
-		await updateUser({ userData, locals, cookies: cookiesMock, token });
+		await syncAuthenticatedUser({
+			...profile,
+			locals,
+			cookies: cookiesMock,
+			currentSessionId: locals.sessionId,
+			currentSecretSessionId: locals.sessionId,
+		});
 
 		const settings = await collections.settings.findOne({
 			_id: insertedId,
@@ -133,7 +152,10 @@ describe("login", () => {
 
 		assert.exists(settings);
 
-		const user = await collections.users.findOne({ hfUserId: userData.sub });
+		const user = await collections.users.findOne({
+			authProvider: profile.authProvider,
+			authSubject: profile.authSubject,
+		});
 
 		expect(settings).toMatchObject({
 			userId: user?._id,
@@ -148,10 +170,9 @@ describe("login", () => {
 });
 
 afterEach(async () => {
-	await collections.users.deleteMany({ hfUserId: userData.sub });
+	await collections.users.deleteMany({ authSubject: profile.authSubject });
 	await collections.sessions.deleteMany({});
 
-	locals.userId = "1234567890";
 	locals.sessionId = "1234567890";
 	vi.clearAllMocks();
 });

@@ -141,6 +141,8 @@ async function seed() {
 			updatedAt: faker.date.recent({ days: 30 }),
 			username: faker.internet.userName(),
 			name: faker.person.fullName(),
+			authProvider: "legacy-oidc",
+			authSubject: faker.string.alphanumeric(24),
 			hfUserId: faker.string.alphanumeric(24),
 			avatarUrl: faker.image.avatar(),
 		}));

@@ -15,6 +15,8 @@ const userData = {
 	username: "new-username",
 	name: "name",
 	avatarUrl: "https://example.com/avatar.png",
+	authProvider: "legacy-oidc",
+	authSubject: "9999999999",
 	hfUserId: "9999999999",
 } satisfies User;
 Object.freeze(userData);
