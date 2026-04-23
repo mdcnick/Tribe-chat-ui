@@ -1,17 +1,16 @@
 import { base } from "$app/paths";
-import { OIDConfig } from "$lib/server/auth";
 import { config } from "$lib/server/config";
 
 /**
  * See https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/
  */
 export const GET = ({ url }) => {
-	if (!OIDConfig.CLIENT_ID) {
+	if (!config.OPENID_CLIENT_ID) {
 		return new Response("Client ID not found", { status: 404 });
 	}
-	if (OIDConfig.CLIENT_ID !== "__CIMD__") {
+	if (config.OPENID_CLIENT_ID !== "__CIMD__") {
 		return new Response(
-			`Client ID is manually set to something other than '__CIMD__': ${OIDConfig.CLIENT_ID}`,
+			`Client ID is manually set to something other than '__CIMD__': ${config.OPENID_CLIENT_ID}`,
 			{
 				status: 404,
 			}
@@ -26,7 +25,7 @@ export const GET = ({ url }) => {
 				new URL(`${base}/login/callback`, config.PUBLIC_ORIGIN || url.origin).toString(),
 			],
 			token_endpoint_auth_method: "none",
-			scopes: OIDConfig.SCOPES,
+			scopes: config.OPENID_SCOPES,
 		}),
 		{
 			headers: {
