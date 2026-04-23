@@ -17,7 +17,7 @@
 	import { fetchMessageUpdates, resolveStreamingMode } from "$lib/utils/messageUpdates";
 	import type { v4 } from "uuid";
 	import { useSettingsStore } from "$lib/stores/settings.js";
-	import { enabledServers } from "$lib/stores/mcpServers";
+	import { disableAllServers, enabledServers } from "$lib/stores/mcpServers";
 	import { browser } from "$app/environment";
 	import {
 		addBackgroundGeneration,
@@ -604,5 +604,8 @@
 />
 
 {#if showSubscribeModal}
-	<SubscribeModal close={() => (showSubscribeModal = false)} />
+	<SubscribeModal
+		close={() => (showSubscribeModal = false)}
+		onContinueWithoutTools={() => disableAllServers()}
+	/>
 {/if}

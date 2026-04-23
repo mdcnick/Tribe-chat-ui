@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import superjson from "superjson";
 import { collections } from "$lib/server/database";
 import { createTestLocals, createTestUser, cleanupTestData } from "./testHelpers";
+import { config } from "$lib/server/config";
 import { GET as userGET } from "../../../../routes/api/v2/user/+server";
 import {
 	GET as settingsGET,
@@ -49,6 +50,43 @@ describe("GET /api/v2/user", () => {
 		const data = await parseResponse(res);
 
 		expect(data).toBeNull();
+	});
+
+	it("includes billing summary when the paywall is enabled", async () => {
+		const { user, locals } = await createTestUser();
+		const originalGet = config.get.bind(config);
+		const getSpy = vi.spyOn(config, "get").mockImplementation((key) => {
+			if (key === "PAYWALL_ENABLED") return "true";
+			return originalGet(key);
+		});
+
+		try {
+			await collections.billingEntitlements.insertOne({
+				userId: user._id,
+				stripeCustomerId: "cus_test_123",
+				stripeSubscriptionId: "sub_test_123",
+				stripePriceId: "price_pro",
+				plan: "pro",
+				status: "active",
+				canUseHermesTools: true,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			const res = await userGET(mockRequestEvent(locals));
+			const data = await parseResponse<Record<string, unknown>>(res);
+
+			expect(data).toMatchObject({
+				id: user._id.toString(),
+				billing: {
+					plan: "pro",
+					status: "active",
+					canUseHermesTools: true,
+				},
+			});
+		} finally {
+			getSpy.mockRestore();
+		}
 	});
 });
 

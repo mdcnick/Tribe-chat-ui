@@ -413,6 +413,15 @@ const buildModels = async (): Promise<ProcessedModel[]> => {
 		const routerMultimodalEnabled =
 			(config.LLM_ROUTER_ENABLE_MULTIMODAL || "").toLowerCase() === "true";
 		const routerToolsEnabled = (config.LLM_ROUTER_ENABLE_TOOLS || "").toLowerCase() === "true";
+		const configRecord = config as unknown as Record<string, string>;
+		const routerHermesModel = (configRecord.LLM_ROUTER_HERMES_MODEL || "").trim();
+		const routerLegacyToolsModel = (configRecord.LLM_ROUTER_TOOLS_MODEL || "").trim();
+
+		if (routerToolsEnabled && !routerHermesModel && !routerLegacyToolsModel) {
+			logger.warn(
+				"[models] router tools are enabled but neither LLM_ROUTER_HERMES_MODEL nor LLM_ROUTER_TOOLS_MODEL is set"
+			);
+		}
 
 		let decorated = builtModels as ProcessedModel[];
 

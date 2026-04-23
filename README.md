@@ -143,7 +143,7 @@ When you select Omni in the UI, Chat UI will:
 Tool and multimodal shortcuts:
 
 - Multimodal: If `LLM_ROUTER_ENABLE_MULTIMODAL=true` and the user sends an image, the router bypasses Arch and uses the model specified in `LLM_ROUTER_MULTIMODAL_MODEL`. Route name: `multimodal`.
-- Tools: If `LLM_ROUTER_ENABLE_TOOLS=true` and the user has at least one MCP server enabled, the router bypasses Arch and uses `LLM_ROUTER_TOOLS_MODEL`. If that model is missing or misconfigured, it falls back to Arch routing. Route name: `agentic`.
+- Tools: If `LLM_ROUTER_ENABLE_TOOLS=true` and the user has at least one MCP server enabled, the router bypasses Arch and uses `LLM_ROUTER_HERMES_MODEL` (fallback: `LLM_ROUTER_TOOLS_MODEL`). If that model is missing or misconfigured, it falls back to Arch routing. Route name: `agentic`.
 
 ### MCP Tools (Optional)
 
@@ -165,7 +165,7 @@ MCP_FORWARD_HF_USER_TOKEN=true
 
 Enable router tool path (Omni):
 
-- Set `LLM_ROUTER_ENABLE_TOOLS=true` and choose a tools‑capable target with `LLM_ROUTER_TOOLS_MODEL=<model id or name>`.
+- Set `LLM_ROUTER_ENABLE_TOOLS=true` and choose a tools‑capable target with `LLM_ROUTER_HERMES_MODEL=<model id or name>` (legacy fallback: `LLM_ROUTER_TOOLS_MODEL`).
 - The target must support OpenAI tools/function calling. Chat UI surfaces a “tools” badge on models that advertise this; you can also force‑enable it per‑model in settings (see below).
 
 Use tools in the UI:
@@ -176,6 +176,22 @@ Use tools in the UI:
 Per‑model overrides:
 
 - In Settings → Model, you can toggle “Tool calling (functions)” and “Multimodal input” per model. These overrides apply even if the provider metadata doesn’t advertise the capability.
+
+Stripe paywall for Hermes + MCP tools (optional):
+
+- Enable server-side gating with `PAYWALL_ENABLED=true`.
+- Enable frontend paywall UI with `PUBLIC_PAYWALL_ENABLED=true`.
+- Set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID_PRO`, and `STRIPE_WEBHOOK_SECRET`.
+- Chat UI exposes:
+  - `POST /api/v2/billing/checkout` to create a Stripe Checkout session.
+  - `POST /api/v2/billing/portal` to open Stripe Billing Portal.
+  - `POST /api/v2/billing/webhook` for Stripe events (`checkout.session.completed`, `customer.subscription.*`).
+- Tool execution is blocked with `402` for users without an active/trialing Pro entitlement; regular chat remains available.
+- Configure your Stripe webhook endpoint to `https://<your-host>/api/v2/billing/webhook` and subscribe to:
+  - `checkout.session.completed`
+  - `customer.subscription.created`
+  - `customer.subscription.updated`
+  - `customer.subscription.deleted`
 
 ## Building
 

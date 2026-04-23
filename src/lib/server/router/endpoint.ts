@@ -19,6 +19,8 @@ import {
 	ROUTER_TOOLS_ROUTE,
 } from "./toolsRoute";
 import { getConfiguredMultimodalModelId } from "./multimodal";
+import { canUseHermesTools } from "$lib/server/billing/entitlements";
+import { PaidFeatureRequiredError } from "$lib/server/billing/errors";
 
 const REASONING_BLOCK_REGEX = /<think>[\s\S]*?(?:<\/think>|$)/g;
 
@@ -225,6 +227,12 @@ export async function makeRouterEndpoint(routerModel: ProcessedModel): Promise<E
 		}
 
 		if (routerToolsEnabled && hasToolsActive) {
+			if (!(await canUseHermesTools(params.locals))) {
+				throw new PaidFeatureRequiredError(
+					"Upgrade required: Hermes tools are available on the Pro plan."
+				);
+			}
+
 			const toolsModel = await findToolsCandidateModel();
 			const toolsCandidate = toolsModel?.id ?? toolsModel?.name;
 			if (!toolsCandidate) {

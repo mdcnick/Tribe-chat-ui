@@ -15,6 +15,7 @@ import { MongoMemoryServer } from "mongodb-memory-server";
 import { logger } from "$lib/server/logger";
 import { building } from "$app/environment";
 import type { TokenCache } from "$lib/types/TokenCache";
+import type { BillingEntitlement } from "$lib/types/BillingEntitlement";
 import { onExit } from "./exitHandler";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -127,6 +128,7 @@ export class Database {
 		const configCollection = db.collection<ConfigKey>("config");
 		const migrationResults = db.collection<MigrationResult>("migrationResults");
 		const sharedConversations = db.collection<SharedConversation>("sharedConversations");
+		const billingEntitlements = db.collection<BillingEntitlement>("billingEntitlements");
 		const bucket = new GridFSBucket(db, { bucketName: "files" });
 
 		// Collections with secondaryPreferred - heavy reads, can tolerate slight replication lag
@@ -160,6 +162,7 @@ export class Database {
 			tokenCaches,
 			tools,
 			config: configCollection,
+			billingEntitlements,
 		};
 	}
 
@@ -182,6 +185,7 @@ export class Database {
 			semaphores,
 			tokenCaches,
 			config,
+			billingEntitlements,
 		} = this.getCollections();
 
 		conversations
@@ -361,6 +365,19 @@ export class Database {
 		config
 			.createIndex({ key: 1 }, { unique: true })
 			.catch((e) => logger.error(e, "Error creating index for config by key"));
+		billingEntitlements
+			.createIndex({ userId: 1 }, { unique: true })
+			.catch((e) => logger.error(e, "Error creating index for billingEntitlements by userId"));
+		billingEntitlements
+			.createIndex({ stripeCustomerId: 1 }, { unique: true, sparse: true })
+			.catch((e) =>
+				logger.error(e, "Error creating index for billingEntitlements by stripeCustomerId")
+			);
+		billingEntitlements
+			.createIndex({ stripeSubscriptionId: 1 }, { unique: true, sparse: true })
+			.catch((e) =>
+				logger.error(e, "Error creating index for billingEntitlements by stripeSubscriptionId")
+			);
 	}
 }
 

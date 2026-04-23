@@ -78,7 +78,34 @@ When using the [LLM Router](./llm-router), you can configure automatic routing t
 
 ```ini
 LLM_ROUTER_ENABLE_TOOLS=true
+LLM_ROUTER_HERMES_MODEL=meta-llama/Llama-3.3-70B-Instruct
+# Legacy fallback key (still supported):
 LLM_ROUTER_TOOLS_MODEL=meta-llama/Llama-3.3-70B-Instruct
 ```
 
-When a user has MCP servers enabled and selects the Omni model, the router will automatically use the specified tools model.
+When a user has MCP servers enabled and selects the Omni model, the router will automatically use the configured Hermes/tools model.
+
+## Stripe Paywall (Optional)
+
+You can gate Hermes + MCP tool execution behind a Stripe subscription while keeping normal chat available.
+
+```ini
+PAYWALL_ENABLED=true
+PUBLIC_PAYWALL_ENABLED=true
+STRIPE_SECRET_KEY=sk_live_or_test_...
+STRIPE_PRICE_ID_PRO=price_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+- `PAYWALL_ENABLED=true` enables server-side `402` enforcement for tool execution.
+- `PUBLIC_PAYWALL_ENABLED=true` enables paywall UI (subscribe modal checkout/portal actions).
+- MCP server management UI remains visible for all users.
+
+Configure Stripe webhook endpoint:
+
+- URL: `https://<your-host>/api/v2/billing/webhook`
+- Events:
+  - `checkout.session.completed`
+  - `customer.subscription.created`
+  - `customer.subscription.updated`
+  - `customer.subscription.deleted`

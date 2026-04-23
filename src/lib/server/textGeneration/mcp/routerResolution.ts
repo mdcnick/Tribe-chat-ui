@@ -62,7 +62,8 @@ export async function resolveRouterTarget({
 				resolvedRoute = "multimodal";
 			}
 		} else {
-			// If tools are enabled and at least one MCP server is active, prefer a tools-capable model
+			// If tools are enabled and at least one MCP server is active, prefer the configured
+			// Hermes/tools model (LLM_ROUTER_HERMES_MODEL with legacy fallback).
 			const toolsEnabled = isRouterToolsBypassEnabled();
 			const hasToolsActive = hasActiveToolsSelection(locals);
 

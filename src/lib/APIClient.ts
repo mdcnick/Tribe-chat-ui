@@ -117,6 +117,10 @@ export function useAPIClient({
 			reports: endpoint(fetcher, `${baseUrl}/user/reports`),
 			"billing-orgs": endpoint(fetcher, `${baseUrl}/user/billing-orgs`),
 		},
+		billing: {
+			checkout: endpoint(fetcher, `${baseUrl}/billing/checkout`),
+			portal: endpoint(fetcher, `${baseUrl}/billing/portal`),
+		},
 		models: {
 			...endpoint(fetcher, `${baseUrl}/models`),
 			old: endpoint(fetcher, `${baseUrl}/models/old`),

@@ -83,4 +83,5 @@ export async function cleanupTestData() {
 	await collections.settings.deleteMany({});
 	await collections.sharedConversations.deleteMany({});
 	await collections.reports.deleteMany({});
+	await collections.billingEntitlements.deleteMany({});
 }

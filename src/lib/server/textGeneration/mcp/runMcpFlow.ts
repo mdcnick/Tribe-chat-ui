@@ -28,6 +28,8 @@ import { prepareMessagesWithFiles } from "$lib/server/textGeneration/utils/prepa
 import { makeImageProcessor } from "$lib/server/endpoints/images";
 import { logger } from "$lib/server/logger";
 import { AbortedGenerations } from "$lib/server/abortedGenerations";
+import { canUseHermesTools } from "$lib/server/billing/entitlements";
+import { PaidFeatureRequiredError } from "$lib/server/billing/errors";
 
 export type RunMcpFlowContext = Pick<
 	TextGenerationContext,
@@ -163,6 +165,12 @@ export async function* runMcpFlow({
 	if (servers.length === 0) {
 		logger.warn({}, "[mcp] all selected MCP servers rejected by URL safety guard");
 		return "not_applicable";
+	}
+
+	if (!(await canUseHermesTools(locals))) {
+		throw new PaidFeatureRequiredError(
+			"Upgrade required: Hermes tools are available on the Pro plan."
+		);
 	}
 
 	// Optionally attach the logged-in user's HF token to the official HF MCP server only.
@@ -748,6 +756,13 @@ export async function* runMcpFlow({
 		logger.warn({}, "[mcp] exceeded tool-followup loops; falling back");
 	} catch (err) {
 		const msg = String(err ?? "");
+		const errObj = err as Record<string, unknown>;
+		const statusCode =
+			(typeof errObj.statusCode === "number" ? errObj.statusCode : undefined) ||
+			(typeof errObj.status === "number" ? errObj.status : undefined);
+		if (statusCode === 402 || err instanceof PaidFeatureRequiredError) {
+			throw err;
+		}
 		const isAbort =
 			(abortSignal && abortSignal.aborted) ||
 			msg.includes("AbortError") ||

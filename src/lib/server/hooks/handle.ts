@@ -75,6 +75,8 @@ export async function handleRequest({ event, resolve }: HandleInput): Promise<Re
 			}
 
 			const isApi = event.url.pathname.startsWith(`${base}/api/`);
+			const isStripeBillingWebhook =
+				event.url.pathname === `${base}/api/v2/billing/webhook` && event.request.method === "POST";
 			const auth = await authenticateRequest(
 				event.request.headers,
 				event.cookies,
@@ -170,6 +172,7 @@ export async function handleRequest({ event, resolve }: HandleInput): Promise<Re
 			if (
 				loginEnabled &&
 				!event.locals.user &&
+				!isStripeBillingWebhook &&
 				!event.url.pathname.startsWith(`${base}/login`) &&
 				!event.url.pathname.startsWith(`${base}/admin`) &&
 				!event.url.pathname.startsWith(`${base}/settings`) &&

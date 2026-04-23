@@ -610,10 +610,15 @@ export async function POST({ request, locals, params, getClientAddress }) {
 					const statusCode =
 						(typeof errObj.statusCode === "number" ? errObj.statusCode : undefined) ||
 						(typeof errObj.status === "number" ? errObj.status : undefined);
+					const message =
+						err.message ||
+						(statusCode === 402
+							? "Upgrade required: Hermes tools are available on the Pro plan."
+							: "An error has occurred.");
 					await update({
 						type: MessageUpdateType.Status,
 						status: MessageUpdateStatus.Error,
-						message: err.message,
+						message,
 						...(statusCode && { statusCode }),
 					});
 					logger.error(err, "Error in conversation stream");

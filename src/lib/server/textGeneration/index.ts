@@ -85,7 +85,16 @@ async function* textGenerationWithoutTitle(
 				(err.name === "AbortError" ||
 					err.name === "APIUserAbortError" ||
 					err.message.includes("Request was aborted")));
+		const errObj = err as Record<string, unknown>;
+		const statusCode =
+			(typeof errObj.statusCode === "number" ? errObj.statusCode : undefined) ||
+			(typeof errObj.status === "number" ? errObj.status : undefined);
+		const isPolicyError =
+			statusCode === 400 || statusCode === 401 || statusCode === 402 || statusCode === 403;
 		if (!isAbort) {
+			if (isPolicyError) {
+				throw err;
+			}
 			// On non-abort MCP error, fall back to normal generation
 			yield* generate({ ...ctx, messages: processedMessages }, preprompt);
 		}

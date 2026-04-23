@@ -160,7 +160,12 @@ type ExtraConfigKeys =
 	| "MCP_SERVERS"
 	| "MCP_FORWARD_HF_USER_TOKEN"
 	| "MCP_TOOL_TIMEOUT_MS"
-	| "EXA_API_KEY";
+	| "EXA_API_KEY"
+	| "PAYWALL_ENABLED"
+	| "STRIPE_SECRET_KEY"
+	| "STRIPE_WEBHOOK_SECRET"
+	| "STRIPE_PRICE_ID_PRO"
+	| "LLM_ROUTER_HERMES_MODEL";
 
 type ConfigProxy = ConfigManager & { [K in ConfigKey | ExtraConfigKeys]: string };
 

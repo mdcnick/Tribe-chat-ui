@@ -31,6 +31,7 @@
 	setContext("publicConfig", data.publicConfig);
 
 	const publicConfig = data.publicConfig;
+	const paywallEnabled = (publicConfig.PUBLIC_PAYWALL_ENABLED || "").toLowerCase() === "true";
 	const client = useAPIClient();
 
 	let conversations = $state(data.conversations);
@@ -129,7 +130,9 @@
 	});
 
 	onMount(async () => {
-		if (publicConfig.isHuggingChat && data.user?.username) {
+		if (paywallEnabled) {
+			isPro.set(Boolean(data.user?.billing?.canUseHermesTools));
+		} else if (publicConfig.isHuggingChat && data.user?.username) {
 			fetch(`https://huggingface.co/api/users/${data.user.username}/overview`)
 				.then((res) => res.json())
 				.then((userData) => {

@@ -18,6 +18,11 @@ interface UserInfo {
 	email?: string;
 	isAdmin: boolean;
 	isEarlyAccess: boolean;
+	billing?: {
+		plan: "pro" | null;
+		status: string;
+		canUseHermesTools: boolean;
+	};
 }
 
 interface SettingsResponse {
