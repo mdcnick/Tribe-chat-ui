@@ -172,7 +172,8 @@ type ExtraConfigKeys =
 	| "PUBLIC_CLERK_SIGN_IN_URL"
 	| "PUBLIC_CLERK_SIGN_UP_URL"
 	| "OPENCODE_BASE_URL"
-	| "OPENCODE_API_KEY";
+	| "OPENCODE_API_KEY"
+	| "OPENCODE_MODELS";
 
 type ConfigProxy = ConfigManager & { [K in ConfigKey | ExtraConfigKeys]: string };
 

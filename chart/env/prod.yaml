@@ -87,6 +87,9 @@ envVars:
   PUBLIC_LLM_ROUTER_DISPLAY_NAME: "Omni"
   PUBLIC_LLM_ROUTER_LOGO_URL: "https://cdn-uploads.huggingface.co/production/uploads/5f17f0a0925b9863e28ad517/C5V0v1xZXv6M7FXsdJH9b.png"
   PUBLIC_LLM_ROUTER_ALIAS_ID: "omni"
+  OPENCODE_BASE_URL: "https://opencode.ai/zen/go/v1"
+  OPENCODE_MODELS: >
+    ["glm-5.1", "glm-5", "kimi-k2.5", "kimi-k2.6", "mimo-v2-pro", "mimo-v2-omni", "mimo-v2.5-pro", "mimo-v2.5", "qwen3.6-plus", "qwen3.5-plus"]
   MODELS: >
     [
       { "id": "MiniMaxAI/MiniMax-M2.7", "description": "Self-evolving 230B MoE agent for frontier coding, reasoning, and tool use." },

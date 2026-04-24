@@ -406,6 +406,47 @@ const buildModels = async (): Promise<ProcessedModel[]> => {
 			)
 		);
 
+		// Add OpenCode Go models if OPENCODE_MODELS is configured
+		const opencodeBaseUrl = (config.OPENCODE_BASE_URL || "").replace(/\/$/, "");
+		const opencodeModelsEnv = (config.OPENCODE_MODELS || "").trim();
+		if (opencodeBaseUrl && opencodeModelsEnv) {
+			let opencodeModelIds: string[];
+			try {
+				opencodeModelIds = JSON5.parse(sanitizeJSONEnv(opencodeModelsEnv, "[]"));
+			} catch {
+				opencodeModelIds = opencodeModelsEnv
+					.split(",")
+					.map((s) => s.trim())
+					.filter(Boolean);
+			}
+
+			if (Array.isArray(opencodeModelIds) && opencodeModelIds.length > 0) {
+				const opencodeModels = await Promise.all(
+					opencodeModelIds.map((id) => {
+						const modelConfig = {
+							id,
+							name: id,
+							displayName: id,
+							endpoints: [
+								{
+									type: "openai" as const,
+									baseURL: opencodeBaseUrl,
+								},
+							],
+						} as ModelConfig;
+						return processModel(modelConfig)
+							.then(addEndpoint)
+							.then((m) => ({
+								...m,
+								hasInferenceAPI: false,
+								isRouter: false,
+							}));
+					})
+				);
+				builtModels.push(...opencodeModels);
+			}
+		}
+
 		const archBase = (config.LLM_ROUTER_ARCH_BASE_URL || "").trim();
 		const routerLabel = (config.PUBLIC_LLM_ROUTER_DISPLAY_NAME || "Omni").trim() || "Omni";
 		const routerLogo = (config.PUBLIC_LLM_ROUTER_LOGO_URL || "").trim();

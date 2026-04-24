@@ -30,7 +30,7 @@
 	let listEl: HTMLDivElement | undefined = $state();
 	let isOpen = $state(false);
 	let modelFilter = $state("");
-	let activeProvider = $state("all");
+	let activeProvider = $state<"hf" | "opencode">("hf");
 	let changingModelId = $state<string | null>(null);
 	let highlightedIndex = $state(0);
 	let favorites = $state<Set<string>>(new Set());
@@ -77,21 +77,12 @@
 			"zai-org": "Z.ai",
 			"featherless-ai": "Featherless AI",
 			"black-forest-labs": "Black Forest Labs",
+			opencode: "OpenCode",
 			other: "Other",
 		};
 		return (
 			mapping[providerId] ?? providerId.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 		);
-	}
-
-	function providerMonogram(providerId: string): string {
-		const name = providerDisplayName(providerId);
-		return name
-			.split(/\s+/)
-			.map((part) => part[0] ?? "")
-			.join("")
-			.slice(0, 2)
-			.toUpperCase();
 	}
 
 	function modelDescription(model: Model): string {
@@ -101,25 +92,16 @@
 		return providerDisplayName(getPrimaryProvider(model));
 	}
 
+	function hasOpencodeProvider(model: Model): boolean {
+		const providers = getModelProviders(model);
+		return providers.some((p) => p.toLowerCase() === "opencode");
+	}
+
 	let availableModels = $derived(models.filter((model) => !model.unlisted));
-	let providerOptions = $derived.by(() => {
-		const counts = new Map<string, number>();
-		for (const model of availableModels) {
-			for (const provider of getModelProviders(model)) {
-				counts.set(provider, (counts.get(provider) ?? 0) + 1);
-			}
-		}
-
-		const providers = Array.from(counts.entries())
-			.map(([id, count]) => ({ id, count, label: providerDisplayName(id) }))
-			.sort((a, b) => a.label.localeCompare(b.label));
-
-		return [{ id: "all", count: availableModels.length, label: "All" }, ...providers];
-	});
 
 	let filteredModels = $derived(
 		availableModels.filter((model) => {
-			if (activeProvider !== "all" && !getModelProviders(model).includes(activeProvider)) {
+			if (activeProvider === "opencode" && !hasOpencodeProvider(model)) {
 				return false;
 			}
 
@@ -171,7 +153,7 @@
 		if (disabled) return;
 		isOpen = true;
 		modelFilter = "";
-		activeProvider = "all";
+		activeProvider = "hf";
 		highlightedIndex = 0;
 		void focusSearch();
 	}
@@ -266,13 +248,23 @@
 		});
 	}
 
-	function getProviderIconUrl(providerId: string): string | null {
-		if (providerId === "all") return null;
-		const hubOrg = PROVIDERS_HUB_ORGS[providerId as keyof typeof PROVIDERS_HUB_ORGS];
+	function getHfAvatarUrl(): string {
+		return "https://huggingface.co/api/avatars/huggingface";
+	}
+
+	function getOpencodeAvatarUrl(): string | null {
+		const hubOrg = PROVIDERS_HUB_ORGS["opencode" as keyof typeof PROVIDERS_HUB_ORGS];
 		if (hubOrg) {
 			return `https://huggingface.co/api/avatars/${hubOrg}`;
 		}
 		return null;
+	}
+
+	function getModelCountForProvider(provider: "hf" | "opencode"): number {
+		if (provider === "hf") {
+			return availableModels.length;
+		}
+		return availableModels.filter(hasOpencodeProvider).length;
 	}
 </script>
 
@@ -325,39 +317,61 @@
 				<div
 					class="flex w-12 flex-col border-r border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900/50"
 				>
-					{#each providerOptions as provider (provider.id)}
-						<button
-							type="button"
-							class="group relative flex size-10 items-center justify-center rounded-md text-xs transition-colors {activeProvider ===
-							provider.id
-								? 'bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-gray-100'
-								: 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-300'}"
-							onclick={() => {
-								activeProvider = provider.id;
-								highlightedIndex = 0;
-							}}
-							title={provider.label}
-						>
-							{#if activeProvider === provider.id}
-								<div
-									class="absolute right-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-l bg-gray-900 dark:bg-gray-100"
-								></div>
-							{/if}
-							{#if provider.id === "all"}
-								<span class="text-xs font-semibold">A</span>
-							{:else if getProviderIconUrl(provider.id)}
-								<img
-									src={getProviderIconUrl(provider.id)!}
-									alt={provider.label}
-									class="size-5 rounded-sm"
-								/>
-							{:else}
-								<span class="text-[10px] font-semibold uppercase"
-									>{providerMonogram(provider.id)}</span
-								>
-							{/if}
-						</button>
-					{/each}
+					<!-- Hugging Face -->
+					<button
+						type="button"
+						class="group relative flex size-10 items-center justify-center rounded-md text-xs transition-colors {activeProvider ===
+						'hf'
+							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-gray-100'
+							: 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-300'}"
+						onclick={() => {
+							activeProvider = "hf";
+							highlightedIndex = 0;
+						}}
+						title="Hugging Face · {getModelCountForProvider('hf')}"
+					>
+						{#if activeProvider === "hf"}
+							<div
+								class="absolute right-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-l bg-gray-900 dark:bg-gray-100"
+							></div>
+						{/if}
+						<img src={getHfAvatarUrl()} alt="Hugging Face" class="size-5 rounded-sm" />
+					</button>
+
+					<!-- OpenCode -->
+					<button
+						type="button"
+						class="group relative flex size-10 items-center justify-center rounded-md text-xs transition-colors {activeProvider ===
+						'opencode'
+							? 'bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-gray-100'
+							: 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-300'}"
+						onclick={() => {
+							activeProvider = "opencode";
+							highlightedIndex = 0;
+						}}
+						title="OpenCode · {getModelCountForProvider('opencode')}"
+					>
+						{#if activeProvider === "opencode"}
+							<div
+								class="absolute right-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-l bg-gray-900 dark:bg-gray-100"
+							></div>
+						{/if}
+						{#if getOpencodeAvatarUrl()}
+							<img src={getOpencodeAvatarUrl()!} alt="OpenCode" class="size-5 rounded-sm" />
+						{:else}
+							<span class="text-[10px] font-semibold uppercase">OC</span>
+						{/if}
+						{#if getOpencodeAvatarUrl()}
+							<img src={getOpencodeAvatarUrl()!} alt="OpenCode" class="size-5 rounded-sm" />
+						{:else}
+							<span class="text-[10px] font-semibold uppercase">OC</span>
+						{/if}
+						{#if getOpencodeAvatarUrl()}
+							<img src={getOpencodeAvatarUrl()!} alt="OpenCode" class="size-5 rounded-sm" />
+						{:else}
+							<span class="text-[10px] font-semibold uppercase">OC</span>
+						{/if}
+					</button>
 				</div>
 
 				<!-- Main content -->
@@ -463,7 +477,7 @@
 							<div class="flex h-full flex-col items-center justify-center px-4 text-center">
 								<p class="text-sm font-medium text-gray-900 dark:text-gray-100">No models found</p>
 								<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-									Try a different search term
+									Try a different search term or switch providers
 								</p>
 							</div>
 						{/if}
