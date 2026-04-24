@@ -160,10 +160,15 @@
 				list.push(model);
 			}
 		}
-		return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+		return Array.from(groups.entries()).sort((a, b) => {
+			// Always put Hugging Face first
+			if (a[0] === "hf-inference") return -1;
+			if (b[0] === "hf-inference") return 1;
+			return a[0].localeCompare(b[0]);
+		});
 	});
 
-	let expandedProviders = $state<Set<string>>(new Set());
+	let expandedProviders = $state<Set<string>>(new Set(["hf-inference"]));
 
 	function toggleProvider(provider: string) {
 		const next = new Set(expandedProviders);
