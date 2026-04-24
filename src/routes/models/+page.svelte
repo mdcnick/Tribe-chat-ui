@@ -6,6 +6,7 @@
 	import { page } from "$app/state";
 
 	import CarbonHelpFilled from "~icons/carbon/help-filled";
+	import CarbonChevronDown from "~icons/carbon/chevron-down";
 	import LucideHammer from "~icons/lucide/hammer";
 	import LucideImage from "~icons/lucide/image";
 	import LucideSettings from "~icons/lucide/settings";
@@ -29,6 +30,11 @@
 	const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ");
 	let queryTokens = $derived(normalize(modelFilter).trim().split(/\s+/).filter(Boolean));
 
+	function getProvider(modelId: string) {
+		const slashIndex = modelId.indexOf("/");
+		return slashIndex > 0 ? modelId.slice(0, slashIndex) : modelId;
+	}
+
 	// Filtered models list
 	let filteredModels = $derived(
 		data.models
@@ -38,6 +44,56 @@
 				return queryTokens.every((q) => haystack.includes(q));
 			})
 	);
+
+	let groupedModels = $derived(() => {
+		const groups = new Map<string, typeof filteredModels>();
+		for (const model of filteredModels) {
+			const provider = getProvider(model.id);
+			let list = groups.get(provider);
+			if (!list) {
+				list = [];
+				groups.set(provider, list);
+			}
+			list.push(model);
+		}
+		return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+	});
+
+	let expandedProviders = $state<Set<string>>(new Set());
+
+	function toggleProvider(provider: string) {
+		const next = new Set(expandedProviders);
+		if (next.has(provider)) {
+			next.delete(provider);
+		} else {
+			next.add(provider);
+		}
+		expandedProviders = next;
+	}
+
+	$effect(() => {
+		// Auto-expand provider that contains the active model
+		const activeModelId = $settings.activeModel;
+		if (activeModelId) {
+			const provider = getProvider(activeModelId);
+			if (!expandedProviders.has(provider)) {
+				const next = new Set(expandedProviders);
+				next.add(provider);
+				expandedProviders = next;
+			}
+		}
+	});
+
+	$effect(() => {
+		// Auto-expand all providers when searching
+		if (queryTokens.length > 0) {
+			const next = new Set(expandedProviders);
+			for (const [provider] of groupedModels()) {
+				next.add(provider);
+			}
+			expandedProviders = next;
+		}
+	});
 </script>
 
 <svelte:head>
@@ -102,130 +158,161 @@
 			<div
 				class="overflow-hidden rounded-2xl border border-gray-200/60 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900"
 			>
-				{#each filteredModels as model, index (model.id)}
-					{@const isActive = model.id === $settings.activeModel}
-					{@const isLast = index === filteredModels.length - 1}
-					<a
-						href="{base}/models/{model.id}"
-						aria-label="Model card for {model.displayName}"
-						class="group flex cursor-pointer items-center gap-2 p-3 sm:gap-4 sm:p-4
-							{isActive
-							? 'bg-gray-50 dark:bg-gray-800'
-							: 'bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800'}
-							{isLast ? '' : 'border-b border-gray-100 dark:border-gray-800'}"
-					>
-						<!-- Avatar -->
-						<div class="flex-shrink-0">
-							{#if model.logoUrl}
-								<img
-									alt={model.displayName}
-									class="size-8 rounded-lg border border-gray-100 bg-gray-50 object-cover dark:border-gray-700 dark:bg-gray-100 sm:size-10"
-									src={model.logoUrl}
-								/>
-							{:else}
-								<div
-									class="h-10 w-10 rounded-lg border border-gray-100 bg-gray-200 dark:border-gray-700 dark:bg-gray-700"
-									aria-hidden="true"
-								></div>
-							{/if}
-						</div>
-
-						<!-- Content -->
-						<div class="min-w-0 flex-1">
-							<div class="flex items-center gap-2">
-								<h3
-									class="truncate font-medium text-gray-900 dark:text-gray-200 max-sm:text-xs"
-									class:font-bold={isActive}
-									class:dark:text-white={isActive}
-								>
-									{model.displayName}
-								</h3>
-								{#if index === 0 && model.isRouter && !isActive}
-									<span
-										class="rounded border border-gray-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-gray-500 dark:border-gray-700 dark:text-gray-400"
-									>
-										Default
-									</span>
-								{/if}
-							</div>
-							<p class="truncate pr-4 text-xs text-gray-500 dark:text-gray-400 sm:text-[13px]">
-								{model.isRouter
-									? "Routes your messages to the best model for your request."
-									: model.description || "-"}
-							</p>
-						</div>
-
-						<!-- Icons and badges -->
-						<div class="flex flex-shrink-0 items-center gap-1.5">
-							{#if publicConfig.isHuggingChat && !model.isRouter && $settings.providerOverrides?.[model.id] && $settings.providerOverrides[model.id] !== "auto"}
-								{@const providerOverride = $settings.providerOverrides[model.id]}
-								{@const hubOrg =
-									PROVIDERS_HUB_ORGS[providerOverride as keyof typeof PROVIDERS_HUB_ORGS]}
-								{#if providerOverride === "fastest"}
-									<div
-										title="Provider: Fastest"
-										class="rounded-md bg-green-50 p-1.5 text-green-600 dark:bg-green-900/20 dark:text-green-400"
-									>
-										<IconFast classNames="size-3 sm:size-3.5" />
-									</div>
-								{:else if providerOverride === "cheapest"}
-									<div
-										title="Provider: Cheapest"
-										class="rounded-md bg-blue-50 p-1.5 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-									>
-										<IconCheap classNames="size-3 sm:size-3.5" />
-									</div>
-								{:else if hubOrg}
-									<div
-										title="Provider: {providerOverride}"
-										class="flex size-[26px] items-center justify-center rounded-md bg-gray-100 p-1 dark:bg-gray-800 sm:size-[30px]"
-									>
-										<img
-											src="https://huggingface.co/api/avatars/{hubOrg}"
-											alt={providerOverride}
-											class="size-full rounded"
-										/>
-									</div>
-								{/if}
-							{/if}
-							{#if $settings.toolsOverrides?.[model.id] ?? (model as { supportsTools?: boolean }).supportsTools}
-								<div
-									title="This model supports tool calling (functions)."
-									class="rounded-md bg-purple-50 p-1.5 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400"
-								>
-									<LucideHammer class="size-3 sm:size-3.5" />
-								</div>
-							{/if}
-							{#if $settings.multimodalOverrides?.[model.id] ?? model.multimodal}
-								<div
-									title="This model is multimodal and supports image inputs natively."
-									class="rounded-md bg-blue-50 p-1.5 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
-								>
-									<LucideImage class="size-3 sm:size-3.5" />
-								</div>
-							{/if}
-							<button
-								type="button"
-								title="Model settings"
-								aria-label="Model settings for {model.displayName}"
-								class="rounded-md border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700"
-								onclick={(e) => {
-									e.preventDefault();
-									e.stopPropagation();
-									goto(`${base}/settings/${model.id}`);
-								}}
+				{#each groupedModels() as [provider, models] (provider)}
+					<div class="border-b border-gray-100 last:border-b-0 dark:border-gray-800">
+						<button
+							type="button"
+							onclick={() => toggleProvider(provider)}
+							class="flex w-full items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 sm:px-5 sm:py-3.5"
+							aria-expanded={expandedProviders.has(provider)}
+						>
+							<CarbonChevronDown
+								class="size-4 flex-none text-gray-400 transition-transform duration-200 dark:text-gray-500 {expandedProviders.has(
+									provider
+								)
+									? 'rotate-180'
+									: ''}"
+							/>
+							<span class="text-sm font-semibold text-gray-800 dark:text-gray-200">{provider}</span>
+							<span
+								class="ml-auto flex-none rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 dark:bg-gray-700/60 dark:text-gray-400"
 							>
-								<LucideSettings class="size-3 sm:size-3.5" />
-							</button>
-							{#if isActive}
-								<span
-									class="rounded-full bg-black px-2.5 py-1 text-xs font-bold text-white shadow-md dark:bg-white dark:text-black"
-								>
-									Active
-								</span>
-							{/if}
-						</div>
-					</a>
+								{models.length}
+							</span>
+						</button>
+
+						{#if expandedProviders.has(provider)}
+							<div class="flex flex-col">
+								{#each models as model, index (model.id)}
+									{@const isActive = model.id === $settings.activeModel}
+									{@const isLast = index === models.length - 1}
+									<a
+										href="{base}/models/{model.id}"
+										aria-label="Model card for {model.displayName}"
+										class="group flex cursor-pointer items-center gap-2 px-4 py-3 sm:gap-4 sm:px-5 sm:py-4
+											{isActive
+											? 'bg-gray-50 dark:bg-gray-800'
+											: 'bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800'}
+											{isLast ? '' : 'border-b border-gray-100 dark:border-gray-800'}"
+									>
+										<!-- Avatar -->
+										<div class="flex-shrink-0">
+											{#if model.logoUrl}
+												<img
+													alt={model.displayName}
+													class="size-8 rounded-lg border border-gray-100 bg-gray-50 object-cover dark:border-gray-700 dark:bg-gray-100 sm:size-10"
+													src={model.logoUrl}
+												/>
+											{:else}
+												<div
+													class="h-10 w-10 rounded-lg border border-gray-100 bg-gray-200 dark:border-gray-700 dark:bg-gray-700"
+													aria-hidden="true"
+												></div>
+											{/if}
+										</div>
+
+										<!-- Content -->
+										<div class="min-w-0 flex-1">
+											<div class="flex items-center gap-2">
+												<h3
+													class="truncate font-medium text-gray-900 dark:text-gray-200 max-sm:text-xs"
+													class:font-bold={isActive}
+													class:dark:text-white={isActive}
+												>
+													{model.displayName}
+												</h3>
+												{#if index === 0 && model.isRouter && !isActive}
+													<span
+														class="rounded border border-gray-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-gray-500 dark:border-gray-700 dark:text-gray-400"
+													>
+														Default
+													</span>
+												{/if}
+											</div>
+											<p
+												class="truncate pr-4 text-xs text-gray-500 dark:text-gray-400 sm:text-[13px]"
+											>
+												{model.isRouter
+													? "Routes your messages to the best model for your request."
+													: model.description || "-"}
+											</p>
+										</div>
+
+										<!-- Icons and badges -->
+										<div class="flex flex-shrink-0 items-center gap-1.5">
+											{#if publicConfig.isHuggingChat && !model.isRouter && $settings.providerOverrides?.[model.id] && $settings.providerOverrides[model.id] !== "auto"}
+												{@const providerOverride = $settings.providerOverrides[model.id]}
+												{@const hubOrg =
+													PROVIDERS_HUB_ORGS[providerOverride as keyof typeof PROVIDERS_HUB_ORGS]}
+												{#if providerOverride === "fastest"}
+													<div
+														title="Provider: Fastest"
+														class="rounded-md bg-green-50 p-1.5 text-green-600 dark:bg-green-900/20 dark:text-green-400"
+													>
+														<IconFast classNames="size-3 sm:size-3.5" />
+													</div>
+												{:else if providerOverride === "cheapest"}
+													<div
+														title="Provider: Cheapest"
+														class="rounded-md bg-blue-50 p-1.5 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+													>
+														<IconCheap classNames="size-3 sm:size-3.5" />
+													</div>
+												{:else if hubOrg}
+													<div
+														title="Provider: {providerOverride}"
+														class="flex size-[26px] items-center justify-center rounded-md bg-gray-100 p-1 dark:bg-gray-800 sm:size-[30px]"
+													>
+														<img
+															src="https://huggingface.co/api/avatars/{hubOrg}"
+															alt={providerOverride}
+															class="size-full rounded"
+														/>
+													</div>
+												{/if}
+											{/if}
+											{#if $settings.toolsOverrides?.[model.id] ?? (model as { supportsTools?: boolean }).supportsTools}
+												<div
+													title="This model supports tool calling (functions)."
+													class="rounded-md bg-purple-50 p-1.5 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400"
+												>
+													<LucideHammer class="size-3 sm:size-3.5" />
+												</div>
+											{/if}
+											{#if $settings.multimodalOverrides?.[model.id] ?? model.multimodal}
+												<div
+													title="This model is multimodal and supports image inputs natively."
+													class="rounded-md bg-blue-50 p-1.5 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400"
+												>
+													<LucideImage class="size-3 sm:size-3.5" />
+												</div>
+											{/if}
+											<button
+												type="button"
+												title="Model settings"
+												aria-label="Model settings for {model.displayName}"
+												class="rounded-md border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-700"
+												onclick={(e) => {
+													e.preventDefault();
+													e.stopPropagation();
+													goto(`${base}/settings/${model.id}`);
+												}}
+											>
+												<LucideSettings class="size-3 sm:size-3.5" />
+											</button>
+											{#if isActive}
+												<span
+													class="rounded-full bg-black px-2.5 py-1 text-xs font-bold text-white shadow-md dark:bg-white dark:text-black"
+												>
+													Active
+												</span>
+											{/if}
+										</div>
+									</a>
+								{/each}
+							</div>
+						{/if}
+					</div>
 				{/each}
 			</div>
 		</div>
