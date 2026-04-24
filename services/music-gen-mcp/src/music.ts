@@ -307,19 +307,43 @@ export async function generateLyriaMusic(
 	}
 
 	const response = await ai.models.generateContent({
-		model: `models/${model}`,
+		model,
 		contents: input.prompt,
 		config: generationConfig,
 	});
 
-	const audioData = response.data;
+	const parts = response.candidates?.[0]?.content?.parts;
+	if (!parts || parts.length === 0) {
+		throw new Error("Lyria music generation failed: no content returned.");
+	}
+
+	let audioData: string | undefined;
+	let mimeType = "audio/wav";
+
+	for (const part of parts) {
+		if (part.inlineData) {
+			audioData = part.inlineData.data;
+			if (part.inlineData.mimeType) {
+				mimeType = part.inlineData.mimeType;
+			}
+			break;
+		}
+	}
+
 	if (!audioData) {
-		throw new Error("Lyria music generation failed: no audio data returned.");
+		const textParts = parts.filter((p) => p.text).map((p) => p.text).join("\n");
+		throw new Error(
+			`Lyria music generation failed: no audio data returned.${textParts ? ` Model said: ${textParts}` : ""}`
+		);
 	}
 
 	const buffer = Buffer.from(audioData, "base64");
-	const mimeType = "audio/wav";
-	const stored = await storeAudioBuffer(config, buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength), mimeType, `lyria-${Date.now()}`);
+	const stored = await storeAudioBuffer(
+		config,
+		buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength),
+		mimeType,
+		`lyria-${Date.now()}`
+	);
 
 	return {
 		audioUrl: stored.audioUrl,
