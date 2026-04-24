@@ -2,8 +2,6 @@
 	import { invalidateAll, goto } from "$app/navigation";
 	import { base } from "$app/paths";
 	import { page } from "$app/state";
-	import IconCheap from "$lib/components/icons/IconCheap.svelte";
-	import IconFast from "$lib/components/icons/IconFast.svelte";
 	import { error } from "$lib/stores/errors";
 	import { useSettingsStore } from "$lib/stores/settings";
 	import type { Model } from "$lib/types/Model";
@@ -11,6 +9,9 @@
 	import { tick } from "svelte";
 	import CarbonCheckmark from "~icons/carbon/checkmark";
 	import CarbonSearch from "~icons/carbon/search";
+	import LucideChevronDown from "~icons/lucide/chevron-down";
+	import LucideStar from "~icons/lucide/star";
+	import LucideStarOff from "~icons/lucide/star-off";
 	import LucideHammer from "~icons/lucide/hammer";
 	import LucideImage from "~icons/lucide/image";
 
@@ -26,10 +27,13 @@
 
 	let rootEl: HTMLDivElement | undefined = $state();
 	let searchInputEl: HTMLInputElement | undefined = $state();
+	let listEl: HTMLDivElement | undefined = $state();
 	let isOpen = $state(false);
 	let modelFilter = $state("");
 	let activeProvider = $state("all");
 	let changingModelId = $state<string | null>(null);
+	let highlightedIndex = $state(0);
+	let favorites = $state<Set<string>>(new Set());
 
 	const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ");
 	let queryTokens = $derived(normalize(modelFilter).trim().split(/\s+/).filter(Boolean));
@@ -92,11 +96,9 @@
 
 	function modelDescription(model: Model): string {
 		if (model.isRouter) {
-			return "Smart routing across the best model for each request.";
+			return "Smart routing";
 		}
-
-		const providerLine = providerDisplayName(getPrimaryProvider(model));
-		return model.description ? `${providerLine} · ${model.description}` : providerLine;
+		return providerDisplayName(getPrimaryProvider(model));
 	}
 
 	let availableModels = $derived(models.filter((model) => !model.unlisted));
@@ -112,7 +114,7 @@
 			.map(([id, count]) => ({ id, count, label: providerDisplayName(id) }))
 			.sort((a, b) => a.label.localeCompare(b.label));
 
-		return [{ id: "all", count: availableModels.length, label: "All models" }, ...providers];
+		return [{ id: "all", count: availableModels.length, label: "All" }, ...providers];
 	});
 
 	let filteredModels = $derived(
@@ -148,6 +150,17 @@
 		return $settings.multimodalOverrides?.[model.id] ?? Boolean(model.multimodal);
 	}
 
+	function toggleFavorite(modelId: string, event: MouseEvent) {
+		event.stopPropagation();
+		const newFavorites = new Set(favorites);
+		if (newFavorites.has(modelId)) {
+			newFavorites.delete(modelId);
+		} else {
+			newFavorites.add(modelId);
+		}
+		favorites = newFavorites;
+	}
+
 	async function focusSearch() {
 		await tick();
 		searchInputEl?.focus();
@@ -159,6 +172,7 @@
 		isOpen = true;
 		modelFilter = "";
 		activeProvider = "all";
+		highlightedIndex = 0;
 		void focusSearch();
 	}
 
@@ -213,10 +227,52 @@
 	}
 
 	function handleWindowKeydown(event: KeyboardEvent) {
-		if (event.key === "Escape" && isOpen) {
+		if (!isOpen) return;
+
+		if (event.key === "Escape") {
 			event.preventDefault();
 			closePicker();
+			return;
 		}
+
+		if (event.key === "ArrowDown") {
+			event.preventDefault();
+			highlightedIndex = Math.min(highlightedIndex + 1, filteredModels.length - 1);
+			scrollToHighlighted();
+			return;
+		}
+
+		if (event.key === "ArrowUp") {
+			event.preventDefault();
+			highlightedIndex = Math.max(highlightedIndex - 1, 0);
+			scrollToHighlighted();
+			return;
+		}
+
+		if (event.key === "Enter" && filteredModels.length > 0) {
+			event.preventDefault();
+			selectModel(filteredModels[highlightedIndex]);
+			return;
+		}
+	}
+
+	function scrollToHighlighted() {
+		tick().then(() => {
+			const items = listEl?.querySelectorAll('[role="option"]');
+			const highlighted = items?.[highlightedIndex] as HTMLElement | undefined;
+			if (highlighted && listEl) {
+				highlighted.scrollIntoView({ block: "nearest" });
+			}
+		});
+	}
+
+	function getProviderIconUrl(providerId: string): string | null {
+		if (providerId === "all") return null;
+		const hubOrg = PROVIDERS_HUB_ORGS[providerId as keyof typeof PROVIDERS_HUB_ORGS];
+		if (hubOrg) {
+			return `https://huggingface.co/api/avatars/${hubOrg}`;
+		}
+		return null;
 	}
 </script>
 
@@ -225,226 +281,192 @@
 <div class="relative" bind:this={rootEl}>
 	<button
 		type="button"
-		class="group inline-flex items-center gap-2 rounded-full border border-gray-200/70 bg-white/60 px-2.5 py-1 text-xs text-gray-500 transition-colors hover:border-gray-300 hover:bg-white/90 hover:text-gray-800 dark:border-gray-700/70 dark:bg-gray-800/60 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-800/90 dark:hover:text-gray-100 {disabled
-			? 'cursor-not-allowed opacity-60'
+		class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200 {disabled
+			? 'cursor-not-allowed opacity-50'
 			: ''}"
 		onclick={() => (isOpen ? closePicker() : openPicker())}
-		aria-haspopup="dialog"
+		aria-haspopup="listbox"
 		aria-expanded={isOpen}
 		aria-label="Choose chat model"
 		{disabled}
 	>
-		<div
-			class="flex size-5 items-center justify-center overflow-hidden rounded-full bg-gray-900/85 text-[10px] font-semibold text-white dark:bg-white/15"
-		>
-			{#if currentModel.logoUrl}
-				<img src={currentModel.logoUrl} alt="" class="size-full object-cover" />
-			{:else}
+		{#if currentModel.logoUrl}
+			<img src={currentModel.logoUrl} alt="" class="size-4 rounded-sm" />
+		{:else}
+			<div
+				class="flex size-4 items-center justify-center rounded-sm bg-gray-200 text-[10px] font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+			>
 				{currentModel.displayName.slice(0, 1).toUpperCase()}
-			{/if}
-		</div>
-		<span class="truncate font-medium text-gray-700 dark:text-gray-100">
-			{currentModel.displayName}
-		</span>
-
+			</div>
+		{/if}
+		<span class="truncate font-medium">{currentModel.displayName}</span>
 		{#if hasProviderOverride}
 			{@const hubOrg =
 				PROVIDERS_HUB_ORGS[currentProviderOverride as keyof typeof PROVIDERS_HUB_ORGS]}
-			<span
-				class="inline-flex shrink-0 items-center rounded-md p-0.5 {currentProviderOverride ===
-				'fastest'
-					? 'bg-green-100 text-green-600 dark:bg-green-800/20 dark:text-green-500'
-					: currentProviderOverride === 'cheapest'
-						? 'bg-blue-100 text-blue-600 dark:bg-blue-800/20 dark:text-blue-500'
-						: ''}"
-				title="Provider: {currentProviderOverride}"
-			>
-				{#if currentProviderOverride === "fastest"}
-					<IconFast classNames="text-sm" />
-				{:else if currentProviderOverride === "cheapest"}
-					<IconCheap classNames="text-sm" />
-				{:else if hubOrg}
-					<img
-						src="https://huggingface.co/api/avatars/{hubOrg}"
-						alt={currentProviderOverride}
-						class="size-3 flex-none rounded-sm"
-					/>
-				{/if}
-			</span>
+			{#if hubOrg}
+				<img
+					src="https://huggingface.co/api/avatars/{hubOrg}"
+					alt={currentProviderOverride}
+					class="size-3 rounded-sm"
+				/>
+			{/if}
 		{/if}
-
-		<span
-			class="text-[10px] text-gray-400 transition-transform dark:text-gray-500 {isOpen
-				? 'rotate-180'
-				: ''}"
-		>
-			▼
-		</span>
+		<LucideChevronDown class="size-3.5 text-gray-400 dark:text-gray-500" />
 	</button>
 
 	{#if isOpen}
 		<div
-			class="absolute bottom-full left-0 z-40 mb-3 w-[min(31rem,calc(100vw-2rem))] overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(37,38,43,0.98),rgba(25,27,31,0.98))] text-gray-100 shadow-[0_28px_90px_rgba(0,0,0,0.55)] backdrop-blur-xl"
+			class="absolute bottom-full left-0 z-50 mb-2 w-80 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
 			role="dialog"
 			aria-label="Model selector"
 		>
-			<div
-				class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.09),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(99,102,241,0.10),transparent_34%)]"
-			></div>
-
-			<div class="relative grid min-h-[24rem] grid-cols-1 sm:grid-cols-[4.4rem,minmax(0,1fr)]">
-				<div class="border-white/8 hidden border-r bg-black/10 p-2.5 sm:flex sm:flex-col sm:gap-2">
+			<div class="flex h-96">
+				<!-- Sidebar -->
+				<div
+					class="flex w-12 flex-col border-r border-gray-200 bg-gray-50 p-1 dark:border-gray-700 dark:bg-gray-900/50"
+				>
 					{#each providerOptions as provider (provider.id)}
 						<button
 							type="button"
-							class="group flex min-h-12 flex-col items-center justify-center rounded-2xl border px-1.5 text-[10px] font-medium transition-all {activeProvider ===
+							class="group relative flex size-10 items-center justify-center rounded-md text-xs transition-colors {activeProvider ===
 							provider.id
-								? 'border-white/12 bg-white text-gray-900 shadow-[0_12px_30px_rgba(255,255,255,0.08)]'
-								: 'bg-white/4 hover:border-white/8 hover:bg-white/8 border-transparent text-gray-400 hover:text-white'}"
-							onclick={() => (activeProvider = provider.id)}
+								? 'bg-white text-gray-900 shadow-sm dark:bg-gray-800 dark:text-gray-100'
+								: 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-300'}"
+							onclick={() => {
+								activeProvider = provider.id;
+								highlightedIndex = 0;
+							}}
 							title={provider.label}
 						>
-							<span
-								class="flex size-7 items-center justify-center rounded-full bg-black/20 text-[9px] font-semibold uppercase"
-							>
-								{provider.id === "all" ? "A" : providerMonogram(provider.id)}
-							</span>
-							<span class="mt-1 truncate">{provider.count}</span>
+							{#if activeProvider === provider.id}
+								<div
+									class="absolute right-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-l bg-gray-900 dark:bg-gray-100"
+								></div>
+							{/if}
+							{#if provider.id === "all"}
+								<span class="text-xs font-semibold">A</span>
+							{:else if getProviderIconUrl(provider.id)}
+								<img
+									src={getProviderIconUrl(provider.id)!}
+									alt={provider.label}
+									class="size-5 rounded-sm"
+								/>
+							{:else}
+								<span class="text-[10px] font-semibold uppercase"
+									>{providerMonogram(provider.id)}</span
+								>
+							{/if}
 						</button>
 					{/each}
 				</div>
 
-				<div class="flex min-h-0 flex-col p-3">
+				<!-- Main content -->
+				<div class="flex min-w-0 flex-1 flex-col">
+					<!-- Search -->
 					<div
-						class="border-white/8 bg-white/4 rounded-[22px] border p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
+						class="flex items-center gap-2 border-b border-gray-200 px-3 py-2 dark:border-gray-700"
 					>
-						<div
-							class="border-white/7 flex items-center gap-2 rounded-2xl border bg-black/20 px-3 py-2"
-						>
-							<CarbonSearch class="size-4 flex-none text-gray-500" />
-							<input
-								bind:this={searchInputEl}
-								bind:value={modelFilter}
-								type="search"
-								placeholder="Search models"
-								aria-label="Search models"
-								class="w-full border-0 bg-transparent p-0 text-sm text-white outline-none placeholder:text-gray-500 focus:ring-0"
-							/>
-						</div>
-
-						<div class="mt-2 flex gap-1.5 overflow-x-auto pb-0.5 sm:hidden">
-							{#each providerOptions as provider (provider.id)}
-								<button
-									type="button"
-									class="shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors {activeProvider ===
-									provider.id
-										? 'border-white/15 bg-white text-gray-900'
-										: 'border-white/8 bg-white/4 hover:border-white/12 text-gray-300 hover:bg-white/10'}"
-									onclick={() => (activeProvider = provider.id)}
-								>
-									{provider.label} · {provider.count}
-								</button>
-							{/each}
-						</div>
+						<CarbonSearch class="size-4 flex-none text-gray-400 dark:text-gray-500" />
+						<input
+							bind:this={searchInputEl}
+							bind:value={modelFilter}
+							type="search"
+							placeholder="Search models..."
+							aria-label="Search models"
+							class="w-full border-0 bg-transparent p-0 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:ring-0 dark:text-gray-100 dark:placeholder:text-gray-500"
+						/>
 					</div>
 
+					<!-- Model list -->
 					<div
-						class="border-white/8 mt-3 flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border bg-black/10"
+						bind:this={listEl}
+						class="scrollbar-custom flex-1 overflow-y-auto p-1"
+						role="listbox"
+						aria-label="Models"
 					>
-						<div
-							class="border-white/8 flex items-center justify-between border-b px-4 py-3 text-[11px] uppercase tracking-[0.24em] text-gray-500"
-						>
-							<span
-								>{activeProvider === "all"
-									? "Model Library"
-									: providerDisplayName(activeProvider)}</span
-							>
-							<span>{filteredModels.length}</span>
-						</div>
-
-						<div class="scrollbar-custom min-h-0 flex-1 overflow-y-auto p-2">
-							{#if filteredModels.length}
-								<div class="flex flex-col gap-1.5">
-									{#each filteredModels as model (model.id)}
-										{@const isActive = model.id === currentModel.id}
-										<button
-											type="button"
-											class="group flex w-full items-center gap-3 rounded-[20px] border px-3 py-3 text-left transition-all {isActive
-												? 'border-white/12 bg-white/10 shadow-[0_16px_30px_rgba(0,0,0,0.18)]'
-												: 'hover:border-white/8 hover:bg-white/6 border-transparent bg-transparent'}"
-											onclick={() => selectModel(model)}
-											disabled={changingModelId !== null}
-											aria-current={isActive ? "true" : undefined}
-										>
-											<div
-												class="border-white/8 bg-white/6 flex size-11 flex-none items-center justify-center overflow-hidden rounded-[16px] border"
-											>
-												{#if model.logoUrl}
-													<img src={model.logoUrl} alt="" class="size-full object-cover" />
-												{:else}
-													<span class="text-sm font-semibold text-gray-200">
-														{model.displayName.slice(0, 1).toUpperCase()}
-													</span>
-												{/if}
-											</div>
-
-											<div class="min-w-0 flex-1">
-												<div class="flex items-center gap-2">
-													<span class="truncate text-sm font-semibold text-white">
-														{model.displayName}
-													</span>
-													{#if isActive}
-														<span
-															class="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-900"
-														>
-															Current
-														</span>
-													{/if}
-												</div>
-												<p class="mt-1 line-clamp-2 text-xs text-gray-400">
-													{modelDescription(model)}
-												</p>
-											</div>
-
-											<div class="flex flex-col items-end gap-1.5">
-												<div class="flex items-center gap-1">
-													{#if supportsTools(model)}
-														<span
-															class="bg-purple-500/12 grid size-7 place-items-center rounded-xl text-purple-300"
-															title="Tool calling supported"
-														>
-															<LucideHammer class="size-3.5" />
-														</span>
-													{/if}
-													{#if supportsMultimodal(model)}
-														<span
-															class="bg-sky-500/12 grid size-7 place-items-center rounded-xl text-sky-300"
-															title="Image input supported"
-														>
-															<LucideImage class="size-3.5" />
-														</span>
-													{/if}
-												</div>
-												{#if changingModelId === model.id}
-													<span class="text-[11px] text-gray-500">Switching…</span>
-												{:else if isActive}
-													<CarbonCheckmark class="size-4 text-white" />
-												{/if}
-											</div>
-										</button>
-									{/each}
-								</div>
-							{:else}
+						{#if filteredModels.length}
+							{#each filteredModels as model, index (model.id)}
+								{@const isActive = model.id === currentModel.id}
+								{@const isHighlighted = index === highlightedIndex}
 								<div
-									class="flex h-full min-h-40 flex-col items-center justify-center px-6 text-center"
+									role="option"
+									aria-selected={isActive}
+									class="group flex w-full cursor-pointer items-start gap-2 rounded-md px-2 py-2 text-left transition-colors {isHighlighted
+										? 'bg-gray-100 dark:bg-gray-700/50'
+										: ''} {isActive
+										? 'bg-gray-50 dark:bg-gray-700/30'
+										: 'hover:bg-gray-50 dark:hover:bg-gray-700/30'}"
+									onclick={() => selectModel(model)}
+									onmouseenter={() => (highlightedIndex = index)}
 								>
-									<p class="text-sm font-medium text-white">No models match that search.</p>
-									<p class="mt-1 text-xs text-gray-500">
-										Try another provider or clear the search input.
-									</p>
+									<!-- Favorite star -->
+									<span
+										class="mt-0.5 flex-none opacity-0 transition-opacity group-hover:opacity-100 {favorites.has(
+											model.id
+										)
+											? 'opacity-100'
+											: ''}"
+										onclick={(e) => toggleFavorite(model.id, e)}
+										aria-label={favorites.has(model.id)
+											? "Remove from favorites"
+											: "Add to favorites"}
+									>
+										{#if favorites.has(model.id)}
+											<LucideStar class="size-3.5 fill-yellow-500 text-yellow-500" />
+										{:else}
+											<LucideStarOff class="size-3.5 text-gray-400 dark:text-gray-500" />
+										{/if}
+									</span>
+
+									<!-- Model icon -->
+									<div
+										class="mt-0.5 flex size-7 flex-none items-center justify-center overflow-hidden rounded-md bg-gray-100 dark:bg-gray-700"
+									>
+										{#if model.logoUrl}
+											<img src={model.logoUrl} alt="" class="size-full object-cover" />
+										{:else}
+											<span class="text-[10px] font-semibold text-gray-600 dark:text-gray-300"
+												>{model.displayName.slice(0, 1).toUpperCase()}</span
+											>
+										{/if}
+									</div>
+
+									<!-- Model info -->
+									<div class="min-w-0 flex-1">
+										<div class="flex items-center gap-1.5">
+											<span class="truncate text-sm font-medium text-gray-900 dark:text-gray-100"
+												>{model.displayName}</span
+											>
+											{#if isActive}
+												<CarbonCheckmark
+													class="size-3.5 flex-none text-gray-900 dark:text-gray-100"
+												/>
+											{/if}
+										</div>
+										<p class="truncate text-xs text-gray-500 dark:text-gray-400">
+											{modelDescription(model)}
+										</p>
+									</div>
+
+									<!-- Capability badges -->
+									<div class="flex flex-none items-center gap-1">
+										{#if supportsTools(model)}
+											<LucideHammer class="size-3 text-purple-500" title="Tool calling" />
+										{/if}
+										{#if supportsMultimodal(model)}
+											<LucideImage class="size-3 text-sky-500" title="Multimodal" />
+										{/if}
+									</div>
 								</div>
-							{/if}
-						</div>
+							{/each}
+						{:else}
+							<div class="flex h-full flex-col items-center justify-center px-4 text-center">
+								<p class="text-sm font-medium text-gray-900 dark:text-gray-100">No models found</p>
+								<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+									Try a different search term
+								</p>
+							</div>
+						{/if}
 					</div>
 				</div>
 			</div>
