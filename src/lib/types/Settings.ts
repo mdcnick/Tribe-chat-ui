@@ -67,6 +67,12 @@ export interface Settings extends Timestamps {
 	 * Stores the org's preferred_username. If empty/undefined, bills to personal account.
 	 */
 	billingOrganization?: string;
+
+	/**
+	 * User-provided API key for the Opencode Go API.
+	 * When set, this overrides the admin-configured OPENCODE_API_KEY for inference requests.
+	 */
+	opencodeApiKey?: string;
 }
 
 export type SettingsEditable = Omit<Settings, "welcomeModalSeenAt" | "createdAt" | "updatedAt">;

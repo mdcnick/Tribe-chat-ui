@@ -43,6 +43,7 @@ interface SettingsResponse {
 	hidePromptExamples: Record<string, boolean>;
 	providerOverrides: Record<string, string>;
 	billingOrganization?: string;
+	opencodeApiKey?: string;
 }
 
 export const load = async ({ depends, fetch, url }) => {

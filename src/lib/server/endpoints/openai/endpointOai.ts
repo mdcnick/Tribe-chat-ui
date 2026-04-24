@@ -101,18 +101,31 @@ export async function endpointOai(
 		return response;
 	};
 
-	const openai = new OpenAI({
-		apiKey: apiKey || "sk-",
-		baseURL,
-		defaultHeaders: {
-			...(config.PUBLIC_APP_NAME === "HuggingChat" && { "User-Agent": "huggingchat" }),
-			...defaultHeaders,
-		},
-		defaultQuery,
-		fetch: customFetch,
-	});
+	const opencodeBaseUrl = (config.OPENCODE_BASE_URL || "").replace(/\/$/, "");
+	const isOpencodeEndpoint = opencodeBaseUrl && baseURL === opencodeBaseUrl;
+
+	const createClient = (overrideApiKey?: string) =>
+		new OpenAI({
+			apiKey: overrideApiKey || apiKey || "sk-",
+			baseURL,
+			defaultHeaders: {
+				...(config.PUBLIC_APP_NAME === "HuggingChat" && { "User-Agent": "huggingchat" }),
+				...defaultHeaders,
+			},
+			defaultQuery,
+			fetch: customFetch,
+		});
+
+	const openai = createClient();
 
 	const imageProcessor = makeImageProcessor(multimodal.image);
+
+	const resolveClient = (locals?: App.Locals) => {
+		if (isOpencodeEndpoint && locals?.opencodeApiKey) {
+			return createClient(locals.opencodeApiKey);
+		}
+		return openai;
+	};
 
 	if (completion === "completions") {
 		return async ({
@@ -147,7 +160,8 @@ export async function endpointOai(
 				presence_penalty: parameters?.presence_penalty,
 			};
 
-			const openAICompletion = await openai.completions.create(body, {
+			const client = resolveClient(locals);
+			const openAICompletion = await client.completions.create(body, {
 				body: { ...body, ...extraBody },
 				headers: {
 					"ChatUI-Conversation-ID": conversationId?.toString() ?? "",
@@ -221,9 +235,11 @@ export async function endpointOai(
 				presence_penalty: parameters?.presence_penalty,
 			};
 
+			const client = resolveClient(locals);
+
 			// Handle both streaming and non-streaming responses with appropriate processors
 			if (streamingSupported) {
-				const openChatAICompletion = await openai.chat.completions.create(
+				const openChatAICompletion = await client.chat.completions.create(
 					body as ChatCompletionCreateParamsStreaming,
 					{
 						body: { ...body, ...extraBody },
@@ -241,7 +257,7 @@ export async function endpointOai(
 				);
 				return openAIChatToTextGenerationStream(openChatAICompletion, () => routerMetadata);
 			} else {
-				const openChatAICompletion = await openai.chat.completions.create(
+				const openChatAICompletion = await client.chat.completions.create(
 					body as ChatCompletionCreateParamsNonStreaming,
 					{
 						body: { ...body, ...extraBody },

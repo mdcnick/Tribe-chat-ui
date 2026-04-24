@@ -22,6 +22,7 @@ type SettingsStore = {
 	directPaste: boolean;
 	hapticsEnabled: boolean;
 	billingOrganization?: string;
+	opencodeApiKey?: string;
 };
 
 type SettingsStoreWritable = Writable<SettingsStore> & {

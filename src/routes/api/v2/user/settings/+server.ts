@@ -24,6 +24,7 @@ const settingsSchema = z.object({
 	hapticsEnabled: z.boolean().default(true),
 	hidePromptExamples: z.record(z.boolean()).default({}),
 	billingOrganization: z.string().optional(),
+	opencodeApiKey: z.string().optional(),
 });
 
 export const GET: RequestHandler = async ({ locals }) => {
@@ -69,6 +70,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 		toolsOverrides: settings?.toolsOverrides ?? {},
 		providerOverrides: settings?.providerOverrides ?? {},
 		billingOrganization: settings?.billingOrganization ?? undefined,
+		opencodeApiKey: settings?.opencodeApiKey ?? undefined,
 	});
 };
 

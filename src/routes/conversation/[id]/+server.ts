@@ -549,8 +549,9 @@ export async function POST({ request, locals, params, getClientAddress }) {
 				// Fetch user settings once for all overrides and billing org
 				const userSettings = await collections.settings.findOne(authCondition(locals));
 
-				// Add billing organization to locals for the endpoint to use
+				// Add billing organization and opencode API key to locals for the endpoint to use
 				locals.billingOrganization = userSettings?.billingOrganization;
+				locals.opencodeApiKey = userSettings?.opencodeApiKey;
 
 				const ctx: TextGenerationContext = {
 					model,

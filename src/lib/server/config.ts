@@ -170,7 +170,9 @@ type ExtraConfigKeys =
 	| "CLERK_JWT_KEY"
 	| "PUBLIC_CLERK_PUBLISHABLE_KEY"
 	| "PUBLIC_CLERK_SIGN_IN_URL"
-	| "PUBLIC_CLERK_SIGN_UP_URL";
+	| "PUBLIC_CLERK_SIGN_UP_URL"
+	| "OPENCODE_BASE_URL"
+	| "OPENCODE_API_KEY";
 
 type ConfigProxy = ConfigManager & { [K in ConfigKey | ExtraConfigKeys]: string };
 

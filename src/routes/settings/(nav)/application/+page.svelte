@@ -87,6 +87,14 @@
 		settings.update((s) => ({ ...s, billingOrganization: v }));
 	}
 
+	function getOpencodeApiKey() {
+		return $settings.opencodeApiKey ?? "";
+	}
+
+	function setOpencodeApiKey(v: string) {
+		settings.update((s) => ({ ...s, opencodeApiKey: v }));
+	}
+
 	const client = useAPIClient();
 
 	const user = $derived(page.data.user);
@@ -508,6 +516,43 @@
 			</div>
 		</section>
 	{/if}
+
+	<section class={sectionCardClass}>
+		<div class={sectionHeaderClass}>
+			<p
+				class="text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-500 dark:text-gray-400"
+			>
+				API Keys
+			</p>
+			<h2 class="mt-1 text-lg font-semibold text-gray-900 dark:text-gray-100">
+				Provider credentials
+			</h2>
+			<p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+				Add your own API keys to override the default provider credentials.
+			</p>
+		</div>
+		<div class={sectionBodyClass}>
+			<div class="flex flex-col gap-1.5">
+				<div class={rowClass}>
+					<div class={rowLabelClass}>
+						<div class={rowTitleClass}>Opencode Go API key</div>
+						<p class={rowBodyClass}>
+							Your personal API key for the Opencode Go API. Leave empty to use the server default.
+						</p>
+					</div>
+					<div class="flex min-h-10 items-center">
+						<input
+							type="password"
+							class="h-10 min-w-[12rem] rounded-xl border border-gray-300 bg-white px-3 text-sm text-gray-800 shadow-sm outline-none transition-colors focus:border-gray-400 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:focus:border-gray-500"
+							value={getOpencodeApiKey()}
+							oninput={(e) => setOpencodeApiKey(e.currentTarget.value)}
+							placeholder="sk-..."
+						/>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
 
 	{#if shouldShowResources}
 		<section class={sectionCardClass}>
