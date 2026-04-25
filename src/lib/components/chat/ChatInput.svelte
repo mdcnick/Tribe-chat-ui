@@ -232,7 +232,7 @@
 	);
 </script>
 
-<div class="flex min-h-full flex-1 flex-col" onpaste={onPaste}>
+<div class="flex w-full flex-1 flex-col" onpaste={onPaste}>
 	<textarea
 		rows="1"
 		tabindex="0"
