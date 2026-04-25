@@ -491,6 +491,28 @@
 		await stopRequestPromise;
 	}
 
+	async function closeBrowserPanel() {
+		const conversationId = page.params.id;
+		browserDebugUrl = undefined;
+		browserUrl = undefined;
+
+		if (!conversationId) {
+			return;
+		}
+
+		try {
+			const response = await fetch(`${base}/conversation/${conversationId}/browser`, {
+				method: "POST",
+			});
+
+			if (!response.ok) {
+				console.error("Failed to release browser session", response.status);
+			}
+		} catch (err) {
+			console.error("Failed to release browser session", err);
+		}
+	}
+
 	function handleKeydown(event: KeyboardEvent) {
 		// Stop generation on ESC key when loading
 		if (event.key === "Escape" && $loading) {
@@ -626,10 +648,7 @@
 			<BrowserPanel
 				debugUrl={browserDebugUrl}
 				url={browserUrl}
-				onClose={() => {
-					browserDebugUrl = undefined;
-					browserUrl = undefined;
-				}}
+				onClose={closeBrowserPanel}
 			/>
 		</div>
 	{/if}
