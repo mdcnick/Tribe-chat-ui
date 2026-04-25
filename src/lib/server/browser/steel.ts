@@ -8,10 +8,13 @@ let client: Steel | null = null;
 function getClient(): Steel | null {
 	if (client) return client;
 	const apiKey = env.STEEL_API_KEY;
-	if (!apiKey) return null;
+	const baseURL = env.STEEL_BASE_URL;
+	// Require API key for Steel cloud (no custom baseURL).
+	// Self-hosted instances (e.g. Railway) often don't require auth by default.
+	if (!apiKey && !baseURL) return null;
 	client = new Steel({
-		steelAPIKey: apiKey,
-		baseURL: env.STEEL_BASE_URL || undefined,
+		...(apiKey ? { steelAPIKey: apiKey } : {}),
+		...(baseURL ? { baseURL } : {}),
 	});
 	return client;
 }
@@ -27,7 +30,7 @@ export async function createBrowserSession(
 ): Promise<BrowserSession | null> {
 	const steel = getClient();
 	if (!steel) {
-		logger.debug("[steel] STEEL_API_KEY not set, skipping browser session");
+		logger.debug("[steel] STEEL not configured (set STEEL_API_KEY or STEEL_BASE_URL)");
 		return null;
 	}
 
