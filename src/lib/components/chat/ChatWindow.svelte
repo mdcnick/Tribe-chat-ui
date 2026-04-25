@@ -725,7 +725,7 @@
 							>
 								<div
 									class={{
-										"flex min-h-8 max-w-[calc(100%-40px)] items-center gap-2 px-3 pb-2 text-xs text-gray-500/90 dark:text-gray-400 max-sm:gap-2": true,
+										"flex min-w-0 items-center gap-2 text-xs text-gray-500/90 dark:text-gray-400 max-sm:gap-2": true,
 										"max-sm:hidden": focused && isVirtualKeyboard(),
 									}}
 								>
