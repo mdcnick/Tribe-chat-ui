@@ -26,7 +26,7 @@
 	import BackgroundGenerationPoller from "$lib/components/BackgroundGenerationPoller.svelte";
 	import { requireAuthUser } from "$lib/utils/auth";
 
-	let { data = $bindable(), children } = $props();
+	let { data, children } = $props();
 
 	setContext("publicConfig", data.publicConfig);
 

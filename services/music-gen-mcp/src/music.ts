@@ -331,7 +331,10 @@ export async function generateLyriaMusic(
 	}
 
 	if (!audioData) {
-		const textParts = parts.filter((p) => p.text).map((p) => p.text).join("\n");
+		const textParts = parts
+			.filter((p) => p.text)
+			.map((p) => p.text)
+			.join("\n");
 		throw new Error(
 			`Lyria music generation failed: no audio data returned.${textParts ? ` Model said: ${textParts}` : ""}`
 		);

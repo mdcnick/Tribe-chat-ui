@@ -423,19 +423,19 @@ const buildModels = async (): Promise<ProcessedModel[]> => {
 			if (Array.isArray(opencodeModelIds) && opencodeModelIds.length > 0) {
 				const opencodeModels = await Promise.all(
 					opencodeModelIds.map((id) => {
-					const modelConfig = {
-						id,
-						name: id,
-						displayName: id,
-						providers: [{ provider: "opencode" }],
-						supportsTools: true,
-						endpoints: [
-							{
-								type: "openai" as const,
-								baseURL: opencodeBaseUrl,
-							},
-						],
-					} as ModelConfig;
+						const modelConfig = {
+							id,
+							name: id,
+							displayName: id,
+							providers: [{ provider: "opencode" }],
+							supportsTools: true,
+							endpoints: [
+								{
+									type: "openai" as const,
+									baseURL: opencodeBaseUrl,
+								},
+							],
+						} as ModelConfig;
 						return processModel(modelConfig)
 							.then(addEndpoint)
 							.then((m) => ({

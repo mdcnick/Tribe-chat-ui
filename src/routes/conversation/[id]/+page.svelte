@@ -33,7 +33,7 @@
 	import { requireAuthUser } from "$lib/utils/auth.js";
 	import { isConversationGenerationActive } from "$lib/utils/generationState";
 
-	let { data = $bindable() } = $props();
+	let { data } = $props();
 
 	let convId = $derived(page.params.id ?? "");
 	let pending = $state(false);
@@ -545,6 +545,12 @@
 	const settings = useSettingsStore();
 	let messages = $state(data.messages);
 	$effect(() => {
+		console.log(
+			"[debug] data.messages length:",
+			data.messages?.length,
+			"current messages length:",
+			messages?.length
+		);
 		messages = data.messages;
 	});
 

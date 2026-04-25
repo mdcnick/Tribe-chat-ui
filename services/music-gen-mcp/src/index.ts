@@ -7,12 +7,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import * as z from "zod/v4";
 
 import { loadConfig } from "./config.js";
-import {
-	SONG_GENRES,
-	generateMusic,
-	generateLyriaMusic,
-	generateSong,
-} from "./music.js";
+import { SONG_GENRES, generateMusic, generateLyriaMusic, generateSong } from "./music.js";
 import { MusicGenerationMode } from "@google/genai";
 
 const config = loadConfig();
@@ -130,9 +125,7 @@ function createServer() {
 					.min(1)
 					.max(120)
 					.optional()
-					.describe(
-						"Optional target duration in seconds. Lyria supports up to 120 seconds."
-					),
+					.describe("Optional target duration in seconds. Lyria supports up to 120 seconds."),
 				seed: z
 					.number()
 					.int()
@@ -143,28 +136,32 @@ function createServer() {
 				model: z
 					.enum(["lyria-3-clip-preview", "lyria-3-pro-preview"])
 					.optional()
-					.describe(
-						"Optional Lyria model override. Default is lyria-3-pro-preview."
-					),
+					.describe("Optional Lyria model override. Default is lyria-3-pro-preview."),
 				temperature: z
 					.number()
 					.min(0)
 					.max(3)
 					.optional()
-					.describe("Controls variance in audio generation. Range [0.0, 3.0]. Higher values produce higher variance."),
+					.describe(
+						"Controls variance in audio generation. Range [0.0, 3.0]. Higher values produce higher variance."
+					),
 				top_k: z
 					.number()
 					.int()
 					.min(1)
 					.max(1000)
 					.optional()
-					.describe("Top-K sampling. Samples the topK tokens with highest probabilities. Range [1, 1000]."),
+					.describe(
+						"Top-K sampling. Samples the topK tokens with highest probabilities. Range [1, 1000]."
+					),
 				guidance: z
 					.number()
 					.min(0)
 					.max(6)
 					.optional()
-					.describe("Controls how closely the model follows prompts. Higher guidance follows more closely but makes transitions more abrupt. Range [0.0, 6.0]."),
+					.describe(
+						"Controls how closely the model follows prompts. Higher guidance follows more closely but makes transitions more abrupt. Range [0.0, 6.0]."
+					),
 				bpm: z
 					.number()
 					.int()
@@ -199,7 +196,9 @@ function createServer() {
 				music_generation_mode: z
 					.enum(["QUALITY", "DIVERSITY", "VOCALIZATION"])
 					.optional()
-					.describe("Generation mode: QUALITY for higher quality, DIVERSITY for more variety, VOCALIZATION for music with vocals."),
+					.describe(
+						"Generation mode: QUALITY for higher quality, DIVERSITY for more variety, VOCALIZATION for music with vocals."
+					),
 			},
 			outputSchema: {
 				audio_url: z.string().url(),
