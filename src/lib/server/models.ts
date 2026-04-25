@@ -423,7 +423,7 @@ const buildModels = async (): Promise<ProcessedModel[]> => {
 			if (Array.isArray(opencodeModelIds) && opencodeModelIds.length > 0) {
 				const opencodeModels = await Promise.all(
 					opencodeModelIds.map((id) => {
-						const modelConfig = {
+						const opencodeModelConfig = modelConfig.parse({
 							id,
 							name: id,
 							displayName: id,
@@ -435,8 +435,8 @@ const buildModels = async (): Promise<ProcessedModel[]> => {
 									baseURL: opencodeBaseUrl,
 								},
 							],
-						} as ModelConfig;
-						return processModel(modelConfig)
+						});
+						return processModel(opencodeModelConfig)
 							.then(addEndpoint)
 							.then((m) => ({
 								...m,

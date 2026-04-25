@@ -103,10 +103,11 @@ export async function endpointOai(
 
 	const opencodeBaseUrl = (config.OPENCODE_BASE_URL || "").replace(/\/$/, "");
 	const isOpencodeEndpoint = opencodeBaseUrl && baseURL === opencodeBaseUrl;
+	const adminOpencodeApiKey = config.OPENCODE_API_KEY?.trim();
 
 	const createClient = (overrideApiKey?: string) =>
 		new OpenAI({
-			apiKey: overrideApiKey || apiKey || "sk-",
+			apiKey: overrideApiKey?.trim() || apiKey || "sk-",
 			baseURL,
 			defaultHeaders: {
 				...(config.PUBLIC_APP_NAME === "HuggingChat" && { "User-Agent": "huggingchat" }),
@@ -121,8 +122,8 @@ export async function endpointOai(
 	const imageProcessor = makeImageProcessor(multimodal.image);
 
 	const resolveClient = (locals?: App.Locals) => {
-		if (isOpencodeEndpoint && locals?.opencodeApiKey) {
-			return createClient(locals.opencodeApiKey);
+		if (isOpencodeEndpoint) {
+			return createClient(locals?.opencodeApiKey || adminOpencodeApiKey);
 		}
 		return openai;
 	};
