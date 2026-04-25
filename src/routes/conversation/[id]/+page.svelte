@@ -608,7 +608,7 @@
 	<title>{title}</title>
 </svelte:head>
 
-<div class="flex h-full w-full">
+<div class="flex h-full w-full min-w-0">
 	<div class="flex h-full min-w-0 flex-1 flex-col">
 		<ChatWindow
 			loading={$loading}
@@ -628,7 +628,7 @@
 	</div>
 	{#if browserDebugUrl}
 		<div
-			class="hidden h-full w-1/2 min-w-[420px] border-l border-gray-200 dark:border-gray-700 md:flex md:flex-col"
+			class="hidden h-full min-w-0 flex-1 basis-1/2 border-l border-gray-200 dark:border-gray-700 md:flex md:flex-col"
 		>
 			<BrowserPanel
 				debugUrl={browserDebugUrl}
