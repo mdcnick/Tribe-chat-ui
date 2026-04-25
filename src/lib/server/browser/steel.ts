@@ -19,6 +19,21 @@ function getClient(): Steel | null {
 	return client;
 }
 
+function rewriteDebugUrl(original: string): string {
+	const publicPrefix = env.STEEL_PUBLIC_DEBUG_URL;
+	if (!publicPrefix) return original;
+	try {
+		const url = new URL(original);
+		const prefix = new URL(publicPrefix);
+		url.protocol = prefix.protocol;
+		url.hostname = prefix.hostname;
+		url.port = prefix.port;
+		return url.toString();
+	} catch {
+		return original;
+	}
+}
+
 export interface BrowserSession {
 	sessionId: string;
 	debugUrl: string;
@@ -39,7 +54,8 @@ export async function createBrowserSession(
 			timeout: 120_000,
 		});
 
-		logger.debug({ sessionId: session.id, debugUrl: session.debugUrl }, "[steel] session created");
+		const debugUrl = rewriteDebugUrl(session.debugUrl);
+		logger.debug({ sessionId: session.id, debugUrl }, "[steel] session created");
 
 		// If we have a query or URL, navigate the browser using Playwright
 		if (query || url) {
@@ -62,7 +78,7 @@ export async function createBrowserSession(
 			}
 		}
 
-		return { sessionId: session.id, debugUrl: session.debugUrl };
+		return { sessionId: session.id, debugUrl };
 	} catch (err) {
 		logger.warn(
 			{ error: err instanceof Error ? err.message : err },
