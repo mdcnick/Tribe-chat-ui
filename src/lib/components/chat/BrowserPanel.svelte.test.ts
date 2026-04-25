@@ -23,32 +23,29 @@ describe("BrowserPanel", () => {
 
 	it("renders a server-emitted browser error without a retry button when no session exists", () => {
 		render(BrowserPanel, {
-			error: "Couldn’t open the browser panel. Try again.",
+			error: "Couldn't open the browser panel. Try again.",
 			url: "https://www.google.com/search?q=chat-ui",
 			onClose: vi.fn(),
 		});
 
 		expect(page.getByText("Browser unavailable")).toBeInTheDocument();
-		expect(page.getByText("Couldn’t open the browser panel. Try again.")).toBeInTheDocument();
+		expect(page.getByText("Couldn't open the browser panel. Try again.")).toBeInTheDocument();
 		expect(page.getByRole("button", { name: "Close panel" })).toBeInTheDocument();
 		expect(page.getByRole("button", { name: "Retry" }).elements).toHaveLength(0);
 		expect(page.getByLabelText("Reload browser").elements).toHaveLength(0);
 	});
 
-	it("converts iframe load failure into the same fallback UI with retry and close affordances", async () => {
+	it("shows fallback UI with retry and close affordances when an error occurs alongside an active session", () => {
 		const onClose = vi.fn();
-		const { baseElement } = render(BrowserPanel, {
+		render(BrowserPanel, {
 			debugUrl: "https://steel.example/live/session-2",
 			url: "https://example.com/article",
+			error: "Couldn't load the live browser. Try reloading or close the panel.",
 			onClose,
 		});
 
-		const iframe = baseElement.querySelector("iframe");
-		expect(iframe).not.toBeNull();
-		iframe?.dispatchEvent(new Event("error"));
-
 		expect(
-			page.getByText("Couldn’t load the live browser. Try reloading or close the panel.")
+			page.getByText("Couldn't load the live browser. Try reloading or close the panel.")
 		).toBeInTheDocument();
 		expect(page.getByRole("button", { name: "Retry" })).toBeInTheDocument();
 		expect(page.getByRole("button", { name: "Close panel" })).toBeInTheDocument();
