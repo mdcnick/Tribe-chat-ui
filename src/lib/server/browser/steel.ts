@@ -1,9 +1,12 @@
 import Steel from "steel-sdk";
-import { chromium } from "playwright-core";
+import { chromium, type Browser } from "playwright-core";
 import { env } from "$env/dynamic/private";
 import { logger } from "$lib/server/logger";
 
 let client: Steel | null = null;
+
+const DEFAULT_STEEL_SESSION_TIMEOUT_MS = 120_000;
+const DEFAULT_STEEL_NAVIGATION_TIMEOUT_MS = 15_000;
 
 function getClient(): Steel | null {
 	if (client) return client;
@@ -19,7 +22,7 @@ function getClient(): Steel | null {
 	return client;
 }
 
-function rewriteDebugUrl(original: string): string {
+export function rewriteDebugUrl(original: string): string {
 	const publicPrefix = env.STEEL_PUBLIC_DEBUG_URL;
 	if (!publicPrefix) return original;
 	try {
@@ -39,10 +42,9 @@ export interface BrowserSession {
 	debugUrl: string;
 }
 
-export async function createBrowserSession(
-	query?: string,
-	url?: string
-): Promise<BrowserSession | null> {
+export async function createSteelSession(options?: {
+	timeoutMs?: number;
+}): Promise<{ sessionId: string; debugUrl: string; websocketUrl: string } | null> {
 	const steel = getClient();
 	if (!steel) {
 		logger.debug("[steel] STEEL not configured (set STEEL_API_KEY or STEEL_BASE_URL)");
@@ -51,34 +53,16 @@ export async function createBrowserSession(
 
 	try {
 		const session = await steel.sessions.create({
-			timeout: 120_000,
+			timeout: options?.timeoutMs ?? DEFAULT_STEEL_SESSION_TIMEOUT_MS,
 		});
 
 		const debugUrl = rewriteDebugUrl(session.debugUrl);
 		logger.debug({ sessionId: session.id, debugUrl }, "[steel] session created");
-
-		// If we have a query or URL, navigate the browser using Playwright
-		if (query || url) {
-			try {
-				const browser = await chromium.connectOverCDP(session.websocketUrl);
-				const context = browser.contexts()[0] ?? (await browser.newContext());
-				const page = context.pages()[0] ?? (await context.newPage());
-
-				const targetUrl =
-					url ?? `https://www.google.com/search?q=${encodeURIComponent(query ?? "")}`;
-				await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 15_000 });
-
-				// Detach Playwright but leave the session alive for the iframe
-				await browser.close();
-			} catch (navErr) {
-				logger.warn(
-					{ sessionId: session.id, error: navErr instanceof Error ? navErr.message : navErr },
-					"[steel] failed to navigate browser, returning session anyway"
-				);
-			}
-		}
-
-		return { sessionId: session.id, debugUrl };
+		return {
+			sessionId: session.id,
+			debugUrl,
+			websocketUrl: session.websocketUrl,
+		};
 	} catch (err) {
 		logger.warn(
 			{ error: err instanceof Error ? err.message : err },
@@ -86,6 +70,67 @@ export async function createBrowserSession(
 		);
 		return null;
 	}
+}
+
+export async function connectToSteelSession(websocketUrl: string): Promise<Browser> {
+	return chromium.connectOverCDP(websocketUrl);
+}
+
+function getNavigationTarget(query?: string, url?: string): string {
+	return url ?? `https://www.google.com/search?q=${encodeURIComponent(query ?? "")}`;
+}
+
+export async function navigateBrowserWithConnection(
+	browser: Browser,
+	target: { query?: string; url?: string },
+	options?: { timeoutMs?: number }
+): Promise<void> {
+	const context = browser.contexts()[0] ?? (await browser.newContext());
+	const page = context.pages()[0] ?? (await context.newPage());
+	await page.goto(getNavigationTarget(target.query, target.url), {
+		waitUntil: "domcontentloaded",
+		timeout: options?.timeoutMs ?? DEFAULT_STEEL_NAVIGATION_TIMEOUT_MS,
+	});
+}
+
+export async function navigateBrowserSession(
+	websocketOrSessionId: string,
+	query?: string,
+	url?: string,
+	options?: { timeoutMs?: number; websocketUrl?: string }
+): Promise<void> {
+	const websocketUrl = options?.websocketUrl ?? websocketOrSessionId;
+	const browser = await connectToSteelSession(websocketUrl);
+	try {
+		await navigateBrowserWithConnection(browser, { query, url }, options);
+	} finally {
+		// Detach Playwright but leave the Steel session alive for the iframe.
+		await browser.close();
+	}
+}
+
+export async function createBrowserSession(
+	query?: string,
+	url?: string,
+	options?: { sessionTimeoutMs?: number; navigationTimeoutMs?: number }
+): Promise<BrowserSession | null> {
+	const session = await createSteelSession({ timeoutMs: options?.sessionTimeoutMs });
+	if (!session) return null;
+
+	if (query || url) {
+		try {
+			await navigateBrowserSession(session.websocketUrl, query, url, {
+				timeoutMs: options?.navigationTimeoutMs,
+			});
+		} catch (navErr) {
+			logger.warn(
+				{ sessionId: session.sessionId, error: navErr instanceof Error ? navErr.message : navErr },
+				"[steel] failed to navigate browser, returning session anyway"
+			);
+		}
+	}
+
+	return { sessionId: session.sessionId, debugUrl: session.debugUrl };
 }
 
 export async function releaseBrowserSession(sessionId: string): Promise<void> {
