@@ -544,7 +544,7 @@
 	}}
 />
 
-<div class="relative z-[-1] min-h-0 min-w-0">
+<div class="relative min-h-0 min-w-0">
 	{#if shareModalOpen}
 		<ShareConversationModal open={shareModalOpen} onclose={() => shareModal.close()} />
 	{/if}
