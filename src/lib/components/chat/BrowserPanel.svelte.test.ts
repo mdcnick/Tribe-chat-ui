@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 describe("BrowserPanel", () => {
 	it("renders the live iframe path and loading state before the stream loads", () => {
-		render(BrowserPanel, {
+		const { baseElement } = render(BrowserPanel, {
 			debugUrl: "https://steel.example/live/session-1",
 			url: "https://example.com",
 			onClose: vi.fn(),
@@ -15,6 +15,10 @@ describe("BrowserPanel", () => {
 		expect(page.getByTitle("Live Browser")).toBeInTheDocument();
 		expect(page.getByLabelText("Reload browser")).toBeInTheDocument();
 		expect(page.getByLabelText("Close browser panel")).toBeInTheDocument();
+
+		const iframe = baseElement.querySelector("iframe");
+		expect(iframe).not.toBeNull();
+		expect(iframe?.getAttribute("src")).toContain("showControls=true");
 	});
 
 	it("renders a server-emitted browser error without a retry button when no session exists", () => {

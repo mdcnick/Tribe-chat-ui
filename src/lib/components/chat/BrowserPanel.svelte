@@ -118,7 +118,7 @@
 			{/if}
 			{#key iframeKey}
 				<iframe
-					src={`${debugUrl}?interactive=true`}
+					src={`${debugUrl}?interactive=true&showControls=true`}
 					title="Live Browser"
 					class="h-full w-full"
 					onload={handleLoad}
