@@ -3,6 +3,7 @@ import { MessageUpdateType, type MessageBrowserUpdate, type MessageUpdate } from
 export interface BrowserPanelState {
 	debugUrl?: string;
 	url?: string;
+	error?: string;
 }
 
 /**
@@ -28,6 +29,7 @@ export function applyBrowserUpdateState(
 		return {
 			debugUrl: update.debugUrl,
 			url: update.url,
+			error: undefined,
 		};
 	}
 
@@ -35,11 +37,21 @@ export function applyBrowserUpdateState(
 		return {
 			debugUrl: state.debugUrl ?? update.debugUrl,
 			url: update.url,
+			error: undefined,
+		};
+	}
+
+	if (update.status === "error") {
+		return {
+			debugUrl: undefined,
+			url: update.url,
+			error: update.message,
 		};
 	}
 
 	return {
 		debugUrl: undefined,
 		url: undefined,
+		error: undefined,
 	};
 }

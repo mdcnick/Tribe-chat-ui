@@ -740,6 +740,17 @@ export async function* runMcpFlow({
 								debugUrl: createdSession.debugUrl,
 								url: resolvedUrl,
 							};
+						} else {
+							logger.warn(
+								{ conversationId, toolName: matchingCall.name, hasQuery: Boolean(query), hasUrl: Boolean(url) },
+								"[mcp] failed to create browser session for panel open"
+							);
+							yield {
+								type: MessageUpdateType.Browser,
+								status: "error",
+								url: resolvedUrl,
+								message: "Couldn’t open the browser panel. Try again.",
+							};
 						}
 					}
 				}

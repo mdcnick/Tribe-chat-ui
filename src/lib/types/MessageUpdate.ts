@@ -132,10 +132,36 @@ export interface MessageRouterMetadataUpdate {
 	provider?: InferenceProvider;
 }
 
-export interface MessageBrowserUpdate {
+interface MessageBrowserUpdateBase<TStatus extends "open" | "navigate" | "close" | "error"> {
 	type: MessageUpdateType.Browser;
-	status: "open" | "navigate" | "close";
+	status: TStatus;
+	url?: string;
+	message?: string;
+}
+
+export interface MessageBrowserOpenUpdate extends MessageBrowserUpdateBase<"open"> {
 	sessionId: string;
 	debugUrl: string;
-	url?: string;
 }
+
+export interface MessageBrowserNavigateUpdate extends MessageBrowserUpdateBase<"navigate"> {
+	sessionId: string;
+	debugUrl: string;
+}
+
+export interface MessageBrowserCloseUpdate extends MessageBrowserUpdateBase<"close"> {
+	sessionId: string;
+	debugUrl: string;
+}
+
+export interface MessageBrowserErrorUpdate extends MessageBrowserUpdateBase<"error"> {
+	sessionId?: string;
+	debugUrl?: string;
+	message: string;
+}
+
+export type MessageBrowserUpdate =
+	| MessageBrowserOpenUpdate
+	| MessageBrowserNavigateUpdate
+	| MessageBrowserCloseUpdate
+	| MessageBrowserErrorUpdate;

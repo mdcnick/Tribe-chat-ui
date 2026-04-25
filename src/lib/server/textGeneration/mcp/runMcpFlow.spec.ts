@@ -361,6 +361,83 @@ describe("runMcpFlow", () => {
 		expect(drainPoolMock).toHaveBeenCalledTimes(1);
 	});
 
+	it("emits a browser error update when the panel should open but session creation fails", async () => {
+		const conversationId = new ObjectId();
+		browserSessionStoreGetMock.mockReturnValueOnce(undefined);
+		browserSessionStoreGetOrCreateMock.mockResolvedValueOnce(null);
+		createMock
+			.mockResolvedValueOnce(
+				new FakeStream([
+					toolCallChunk({
+						id: "call-1",
+						name: "web_search",
+						argumentsJson: JSON.stringify({ query: "weather" }),
+					}),
+				])
+			)
+			.mockResolvedValueOnce(new FakeStream([finalAnswerChunk("Here is the weather.")]));
+
+		const { runMcpFlow } = await import("./runMcpFlow");
+		const { updates, result } = await collectUpdates(
+			runMcpFlow({
+				model: {
+					id: "router-model",
+					name: "router-model",
+					parameters: {},
+					multimodal: false,
+					supportsTools: true,
+				} as never,
+				conv: {
+					_id: conversationId,
+				} as never,
+				messages: [
+					{
+						from: "user",
+						content: "Find the weather",
+					},
+				] as never,
+				assistant: undefined,
+				forceMultimodal: false,
+				forceTools: true,
+				provider: undefined,
+				locals: {
+					sessionId: "test-session",
+					isAdmin: false,
+				} as never,
+				abortController: new AbortController(),
+				promptedAt: new Date(),
+			})
+		);
+
+		expect(result).toBe("completed");
+		expect(browserSessionStoreGetMock).toHaveBeenCalledWith(conversationId.toString());
+		expect(browserSessionStoreGetOrCreateMock).toHaveBeenCalledWith(conversationId.toString(), {
+			query: "weather",
+			url: undefined,
+		});
+		expect(updates).toContainEqual({
+			type: "browser",
+			status: "error",
+			url: "https://www.google.com/search?q=weather",
+			message: "Couldn’t open the browser panel. Try again.",
+		});
+		expect(updates).not.toContainEqual(
+			expect.objectContaining({
+				type: "browser",
+				status: "open",
+			})
+		);
+		expect(loggerWarnMock).toHaveBeenCalledWith(
+			{
+				conversationId: conversationId.toString(),
+				toolName: "web_search",
+				hasQuery: true,
+				hasUrl: false,
+			},
+			"[mcp] failed to create browser session for panel open"
+		);
+	});
+
 	it("reuses the existing browser session and emits navigate for follow-up tool calls", async () => {
 		const conversationId = new ObjectId();
 		browserSessionStoreGetMock.mockReturnValueOnce({
