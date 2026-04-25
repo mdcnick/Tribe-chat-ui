@@ -32,6 +32,7 @@
 	import { streamStart } from "$lib/utils/haptics";
 	import { requireAuthUser } from "$lib/utils/auth.js";
 	import { isConversationGenerationActive } from "$lib/utils/generationState";
+	import { applyBrowserPanelUpdate } from "./browserPanelState";
 
 	let { data } = $props();
 
@@ -122,9 +123,6 @@
 			$isAborted = false;
 			$loading = true;
 			pending = true;
-			// Clear any previous browser panel when starting a new turn
-			browserDebugUrl = undefined;
-			browserUrl = undefined;
 			const base64Files = await Promise.all(
 				(files ?? []).map((file) =>
 					file2base64(file).then((value) => ({
@@ -416,15 +414,10 @@
 						model: update.model,
 					};
 				} else if (update.type === MessageUpdateType.Browser) {
-					if (update.status === "open") {
-						browserDebugUrl = update.debugUrl;
-						browserUrl = update.url;
-					} else if (update.status === "close") {
-						browserDebugUrl = undefined;
-						browserUrl = undefined;
-					} else if (update.status === "navigate") {
-						browserUrl = update.url;
-					}
+					({ debugUrl: browserDebugUrl, url: browserUrl } = applyBrowserPanelUpdate(
+						{ debugUrl: browserDebugUrl, url: browserUrl },
+						update
+					));
 				}
 			}
 

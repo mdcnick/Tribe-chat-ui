@@ -30,11 +30,8 @@ import { logger } from "$lib/server/logger";
 import { AbortedGenerations } from "$lib/server/abortedGenerations";
 import { canUseHermesTools } from "$lib/server/billing/entitlements";
 import { PaidFeatureRequiredError } from "$lib/server/billing/errors";
-import {
-	createBrowserSession,
-	releaseBrowserSession,
-	shouldOpenBrowserPanel,
-} from "$lib/server/browser/steel";
+import { browserSessionStore } from "$lib/server/browser/sessionStore";
+import { shouldOpenBrowserPanel } from "$lib/server/browser/steel";
 
 export type RunMcpFlowContext = Pick<
 	TextGenerationContext,
@@ -63,11 +60,13 @@ export async function* runMcpFlow({
 	abortController?: AbortController;
 	promptedAt?: Date;
 }): AsyncGenerator<MessageUpdate, McpFlowResult, undefined> {
+	const conversationId = conv._id.toString();
+
 	// Helper to check if generation should be aborted via DB polling
 	// Also triggers the abort controller to cancel active streams/requests
 	const checkAborted = (): boolean => {
 		if (abortSignal?.aborted) return true;
-		const abortTime = AbortedGenerations.getInstance().getAbortTime(conv._id.toString());
+		const abortTime = AbortedGenerations.getInstance().getAbortTime(conversationId);
 		if (abortTime && promptedAt && abortTime > promptedAt) {
 			// Trigger the abort controller to cancel active streams
 			if (abortController && !abortController.signal.aborted) {
@@ -78,9 +77,8 @@ export async function* runMcpFlow({
 		return false;
 	};
 
-	// Track an optional Steel browser session for visualising search/tool calls
-	let browserSession: { sessionId: string; debugUrl: string } | null = null;
-	let browserOpened = false;
+	// Conversation-scoped Steel browser session reuse.
+	// debugUrl is the live Steel stream and should be reused rather than regenerated per navigation.
 	// Start from env-configured servers
 	let servers = getMcpServers();
 	try {
@@ -495,7 +493,7 @@ export async function* runMcpFlow({
 				{
 					signal: abortSignal,
 					headers: {
-						"ChatUI-Conversation-ID": conv._id.toString(),
+						"ChatUI-Conversation-ID": conversationId,
 						"X-use-cache": "false",
 						...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
 					},
@@ -654,7 +652,7 @@ export async function* runMcpFlow({
 						{
 							signal: abortSignal,
 							headers: {
-								"ChatUI-Conversation-ID": conv._id.toString(),
+								"ChatUI-Conversation-ID": conversationId,
 								"X-use-cache": "false",
 								...(locals?.token ? { Authorization: `Bearer ${locals.token}` } : {}),
 							},
@@ -697,34 +695,51 @@ export async function* runMcpFlow({
 					tool_calls: toolCalls,
 				};
 
-				// Open a live browser panel when a search-related tool is called
-				if (!browserOpened) {
-					const matchingCall = calls.find((c) => shouldOpenBrowserPanel(c.name));
-					if (matchingCall) {
-						const args = parseArgs(matchingCall.arguments);
-						const query =
-							typeof args.query === "string"
-								? args.query
-								: typeof args.q === "string"
-									? args.q
-									: typeof args.search_query === "string"
-										? args.search_query
-										: undefined;
-						const url = typeof args.url === "string" ? args.url : undefined;
-						browserSession = await createBrowserSession(query, url);
-						if (browserSession) {
+				// Open or reuse a conversation-scoped live browser panel for search-related tool calls.
+				// The Steel debugUrl is a live stream and should stay stable while server-side navigation updates it.
+				const matchingCall = calls.find((c) => shouldOpenBrowserPanel(c.name));
+				if (matchingCall) {
+					const args = parseArgs(matchingCall.arguments);
+					const query =
+						typeof args.query === "string"
+							? args.query
+							: typeof args.q === "string"
+								? args.q
+								: typeof args.search_query === "string"
+									? args.search_query
+									: undefined;
+					const url = typeof args.url === "string" ? args.url : undefined;
+					const resolvedUrl =
+						url ??
+						(query
+							? `https://www.google.com/search?q=${encodeURIComponent(query)}`
+							: undefined);
+					const existingSession = browserSessionStore.get(conversationId);
+
+					if (existingSession) {
+						const reusedSession = await browserSessionStore.navigate(conversationId, { query, url });
+						if (reusedSession) {
+							yield {
+								type: MessageUpdateType.Browser,
+								status: "navigate",
+								sessionId: reusedSession.sessionId,
+								debugUrl: reusedSession.debugUrl,
+								url: resolvedUrl,
+							};
+						}
+					} else {
+						const createdSession = await browserSessionStore.getOrCreate(conversationId, {
+							query,
+							url,
+						});
+						if (createdSession) {
 							yield {
 								type: MessageUpdateType.Browser,
 								status: "open",
-								sessionId: browserSession.sessionId,
-								debugUrl: browserSession.debugUrl,
-								url:
-									url ??
-									(query
-										? `https://www.google.com/search?q=${encodeURIComponent(query)}`
-										: undefined),
+								sessionId: createdSession.sessionId,
+								debugUrl: createdSession.debugUrl,
+								url: resolvedUrl,
 							};
-							browserOpened = true;
 						}
 					}
 				}
@@ -816,22 +831,9 @@ export async function* runMcpFlow({
 		}
 		logger.warn({ err: msg }, "[mcp] flow failed, falling back to default endpoint");
 	} finally {
-		// ensure MCP clients are closed after the turn
+		// ensure MCP clients are closed after the turn; conversation-scoped browser sessions stay open
+		// until explicit close or idle cleanup in the session store.
 		await drainPool();
-		// Release any Steel browser session that was opened
-		if (browserOpened && browserSession) {
-			try {
-				yield {
-					type: MessageUpdateType.Browser,
-					status: "close",
-					sessionId: browserSession.sessionId,
-					debugUrl: browserSession.debugUrl,
-				};
-			} catch {
-				// ignore yield errors on cleanup
-			}
-			await releaseBrowserSession(browserSession.sessionId);
-		}
 	}
 
 	return "not_applicable";
