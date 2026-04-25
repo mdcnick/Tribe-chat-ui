@@ -722,7 +722,59 @@
 								{modelIsMultimodal}
 								{modelSupportsTools}
 								bind:focused
-							/>
+							>
+								<div
+									class={{
+										"flex min-h-8 max-w-[calc(100%-40px)] items-center gap-2 px-3 pb-2 text-xs text-gray-500/90 dark:text-gray-400 max-sm:gap-2": true,
+										"max-sm:hidden": focused && isVirtualKeyboard(),
+									}}
+								>
+									{#if models.find((m) => m.id === currentModel.id)}
+										{#if loading && streamingToolCallName}
+											<span class="inline-flex items-center gap-1 whitespace-nowrap text-xs">
+												<LucideHammer class="size-3" />
+												Calling tool
+												<span class="loading-dots font-medium">
+													{availableTools.find((t) => t.name === streamingToolCallName)
+														?.displayName ?? streamingToolCallName}
+												</span>
+											</span>
+										{:else if !currentModel.isRouter || !loading}
+											<ChatModelPicker {models} {currentModel} disabled={loading} />
+										{:else if showRouterDetails && streamingRouterMetadata?.route}
+											<div
+												class="mr-2 flex items-center gap-1.5 whitespace-nowrap text-[.70rem] text-xs leading-none text-gray-400 dark:text-gray-400"
+											>
+												<IconOmni classNames="text-xs animate-pulse" />
+
+												<span class="router-badge-text router-shimmer">
+													{streamingRouterMetadata.route}
+												</span>
+
+												<span class="text-gray-500">with</span>
+
+												<span class="router-badge-text">
+													{streamingRouterModelName}
+												</span>
+											</div>
+										{:else}
+											<div
+												class="loading-dots relative inline-flex items-center text-gray-400 dark:text-gray-400"
+												aria-label="Routing…"
+											>
+												<IconOmni classNames="text-xs animate-pulse mr-1" /> Routing
+											</div>
+										{/if}
+									{:else}
+										<span class="inline-flex items-center line-through dark:border-gray-700">
+											{currentModel.id}
+										</span>
+									{/if}
+									{#if !messages.length && !loading}
+										<span class="max-sm:hidden">Generated content may be inaccurate or false.</span>
+									{/if}
+								</div>
+							</ChatInput>
 						{/if}
 
 						{#if loading}
@@ -764,57 +816,6 @@
 					</div>
 				{/if}
 			</form>
-			<div
-				class={{
-					"mt-1.5 flex h-5 items-center self-stretch whitespace-nowrap px-0.5 text-xs text-gray-400/90 max-md:mb-2 max-sm:gap-2": true,
-					"max-sm:hidden": focused && isVirtualKeyboard(),
-				}}
-			>
-				{#if models.find((m) => m.id === currentModel.id)}
-					{#if loading && streamingToolCallName}
-						<span class="inline-flex items-center gap-1 whitespace-nowrap text-xs">
-							<LucideHammer class="size-3" />
-							Calling tool
-							<span class="loading-dots font-medium">
-								{availableTools.find((t) => t.name === streamingToolCallName)?.displayName ??
-									streamingToolCallName}
-							</span>
-						</span>
-					{:else if !currentModel.isRouter || !loading}
-						<ChatModelPicker {models} {currentModel} disabled={loading} />
-					{:else if showRouterDetails && streamingRouterMetadata?.route}
-						<div
-							class="mr-2 flex items-center gap-1.5 whitespace-nowrap text-[.70rem] text-xs leading-none text-gray-400 dark:text-gray-400"
-						>
-							<IconOmni classNames="text-xs animate-pulse" />
-
-							<span class="router-badge-text router-shimmer">
-								{streamingRouterMetadata.route}
-							</span>
-
-							<span class="text-gray-500">with</span>
-
-							<span class="router-badge-text">
-								{streamingRouterModelName}
-							</span>
-						</div>
-					{:else}
-						<div
-							class="loading-dots relative inline-flex items-center text-gray-400 dark:text-gray-400"
-							aria-label="Routing…"
-						>
-							<IconOmni classNames="text-xs animate-pulse mr-1" /> Routing
-						</div>
-					{/if}
-				{:else}
-					<span class="inline-flex items-center line-through dark:border-gray-700">
-						{currentModel.id}
-					</span>
-				{/if}
-				{#if !messages.length && !loading}
-					<span class="max-sm:hidden">Generated content may be inaccurate or false.</span>
-				{/if}
-			</div>
 		</div>
 	</div>
 </div>
