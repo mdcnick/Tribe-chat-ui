@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ChatWindow from "$lib/components/chat/ChatWindow.svelte";
+	import BrowserPanel from "$lib/components/chat/BrowserPanel.svelte";
 	import { pendingMessage } from "$lib/stores/pendingMessage";
 	import { isAborted } from "$lib/stores/isAborted";
 	import { onMount } from "svelte";
@@ -43,6 +44,10 @@
 	let messageUpdatesAbortController = new AbortController();
 
 	let files: File[] = $state([]);
+
+	// Live browser panel state (Steel)
+	let browserDebugUrl = $state<string | undefined>(undefined);
+	let browserUrl = $state<string | undefined>(undefined);
 
 	let conversations = $state(data.conversations);
 	$effect(() => {
@@ -117,6 +122,9 @@
 			$isAborted = false;
 			$loading = true;
 			pending = true;
+			// Clear any previous browser panel when starting a new turn
+			browserDebugUrl = undefined;
+			browserUrl = undefined;
 			const base64Files = await Promise.all(
 				(files ?? []).map((file) =>
 					file2base64(file).then((value) => ({
@@ -407,6 +415,16 @@
 						route: update.route,
 						model: update.model,
 					};
+				} else if (update.type === MessageUpdateType.Browser) {
+					if (update.status === "open") {
+						browserDebugUrl = update.debugUrl;
+						browserUrl = update.url;
+					} else if (update.status === "close") {
+						browserDebugUrl = undefined;
+						browserUrl = undefined;
+					} else if (update.status === "navigate") {
+						browserUrl = update.url;
+					}
 				}
 			}
 
@@ -573,6 +591,9 @@
 		$isAborted = true;
 		$loading = false;
 		messageUpdatesAbortController.abort();
+		// Clear browser panel when leaving the conversation
+		browserDebugUrl = undefined;
+		browserUrl = undefined;
 	});
 
 	let title = $derived.by(() => {
@@ -587,21 +608,39 @@
 	<title>{title}</title>
 </svelte:head>
 
-<ChatWindow
-	loading={$loading}
-	{pending}
-	messages={messagesPath as Message[]}
-	{messagesAlternatives}
-	shared={data.shared}
-	preprompt={data.preprompt}
-	bind:files
-	onmessage={onMessage}
-	onretry={onRetry}
-	onshowAlternateMsg={onShowAlternateMsg}
-	onstop={stopGeneration}
-	models={data.models}
-	currentModel={findCurrentModel(data.models, data.oldModels, data.model)}
-/>
+<div class="flex h-full w-full">
+	<div class="flex h-full min-w-0 flex-1 flex-col">
+		<ChatWindow
+			loading={$loading}
+			{pending}
+			messages={messagesPath as Message[]}
+			{messagesAlternatives}
+			shared={data.shared}
+			preprompt={data.preprompt}
+			bind:files
+			onmessage={onMessage}
+			onretry={onRetry}
+			onshowAlternateMsg={onShowAlternateMsg}
+			onstop={stopGeneration}
+			models={data.models}
+			currentModel={findCurrentModel(data.models, data.oldModels, data.model)}
+		/>
+	</div>
+	{#if browserDebugUrl}
+		<div
+			class="hidden h-full w-1/2 min-w-[420px] border-l border-gray-200 dark:border-gray-700 md:flex md:flex-col"
+		>
+			<BrowserPanel
+				debugUrl={browserDebugUrl}
+				url={browserUrl}
+				onClose={() => {
+					browserDebugUrl = undefined;
+					browserUrl = undefined;
+				}}
+			/>
+		</div>
+	{/if}
+</div>
 
 {#if showSubscribeModal}
 	<SubscribeModal

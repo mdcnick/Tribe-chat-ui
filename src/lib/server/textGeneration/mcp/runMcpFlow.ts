@@ -30,6 +30,11 @@ import { logger } from "$lib/server/logger";
 import { AbortedGenerations } from "$lib/server/abortedGenerations";
 import { canUseHermesTools } from "$lib/server/billing/entitlements";
 import { PaidFeatureRequiredError } from "$lib/server/billing/errors";
+import {
+	createBrowserSession,
+	releaseBrowserSession,
+	shouldOpenBrowserPanel,
+} from "$lib/server/browser/steel";
 
 export type RunMcpFlowContext = Pick<
 	TextGenerationContext,
@@ -72,6 +77,10 @@ export async function* runMcpFlow({
 		}
 		return false;
 	};
+
+	// Track an optional Steel browser session for visualising search/tool calls
+	let browserSession: { sessionId: string; debugUrl: string } | null = null;
+	let browserOpened = false;
 	// Start from env-configured servers
 	let servers = getMcpServers();
 	try {
@@ -688,6 +697,38 @@ export async function* runMcpFlow({
 					tool_calls: toolCalls,
 				};
 
+				// Open a live browser panel when a search-related tool is called
+				if (!browserOpened) {
+					const matchingCall = calls.find((c) => shouldOpenBrowserPanel(c.name));
+					if (matchingCall) {
+						const args = parseArgs(matchingCall.arguments);
+						const query =
+							typeof args.query === "string"
+								? args.query
+								: typeof args.q === "string"
+									? args.q
+									: typeof args.search_query === "string"
+										? args.search_query
+										: undefined;
+						const url = typeof args.url === "string" ? args.url : undefined;
+						browserSession = await createBrowserSession(query, url);
+						if (browserSession) {
+							yield {
+								type: MessageUpdateType.Browser,
+								status: "open",
+								sessionId: browserSession.sessionId,
+								debugUrl: browserSession.debugUrl,
+								url:
+									url ??
+									(query
+										? `https://www.google.com/search?q=${encodeURIComponent(query)}`
+										: undefined),
+							};
+							browserOpened = true;
+						}
+					}
+				}
+
 				const exec = executeToolCalls({
 					calls,
 					mapping,
@@ -777,6 +818,20 @@ export async function* runMcpFlow({
 	} finally {
 		// ensure MCP clients are closed after the turn
 		await drainPool();
+		// Release any Steel browser session that was opened
+		if (browserOpened && browserSession) {
+			try {
+				yield {
+					type: MessageUpdateType.Browser,
+					status: "close",
+					sessionId: browserSession.sessionId,
+					debugUrl: browserSession.debugUrl,
+				};
+			} catch {
+				// ignore yield errors on cleanup
+			}
+			await releaseBrowserSession(browserSession.sessionId);
+		}
 	}
 
 	return "not_applicable";
