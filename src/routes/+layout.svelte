@@ -29,9 +29,7 @@
 	let { data, children } = $props();
 
 	const publicConfig = $derived(data.publicConfig);
-	$effect(() => {
-		setContext("publicConfig", publicConfig);
-	});
+	setContext("publicConfig", publicConfig);
 
 	const paywallEnabled = $derived(
 		(publicConfig.PUBLIC_PAYWALL_ENABLED || "").toLowerCase() === "true"
