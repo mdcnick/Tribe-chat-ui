@@ -39,7 +39,7 @@ export async function upsertAgentSession(
 		{ $set: { userId, ...doc } },
 		{ upsert: true, returnDocument: "after" }
 	);
-	const doc_ = result?.value ?? null;
+	const doc_ = result ?? null;
 	if (!doc_) {
 		throw new Error(`upsertAgentSession returned no document for userId=${userId}`);
 	}
