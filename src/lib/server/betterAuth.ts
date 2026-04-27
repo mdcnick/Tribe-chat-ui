@@ -83,6 +83,9 @@ export function setAuthSessionCookie(cookies: Cookies, token: string) {
 		secure: !dev && config.ALLOW_INSECURE_COOKIES !== "true",
 		sameSite: dev || config.ALLOW_INSECURE_COOKIES === "true" ? "lax" : "none",
 		maxAge: BA_SESSION_MAX_AGE,
+		// Prevent SvelteKit from URL-encoding the token (encodeURIComponent turns + and = into
+		// %2B/%3D), which breaks better-auth's session lookup against the raw DB token.
+		encode: (v) => v,
 	});
 }
 
