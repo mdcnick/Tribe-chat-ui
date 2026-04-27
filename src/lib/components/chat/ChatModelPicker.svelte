@@ -2,6 +2,7 @@
 	import { invalidateAll, goto } from "$app/navigation";
 	import { base } from "$app/paths";
 	import { page } from "$app/state";
+	import Portal from "$lib/components/Portal.svelte";
 	import { error } from "$lib/stores/errors";
 	import { useSettingsStore } from "$lib/stores/settings";
 	import type { Model } from "$lib/types/Model";
@@ -26,8 +27,11 @@
 	const settings = useSettingsStore();
 
 	let rootEl: HTMLDivElement | undefined = $state();
+	let triggerEl: HTMLButtonElement | undefined = $state();
+	let popupEl: HTMLDivElement | undefined = $state();
 	let searchInputEl: HTMLInputElement | undefined = $state();
 	let listEl: HTMLDivElement | undefined = $state();
+	let popupStyle = $state("");
 	let isOpen = $state(false);
 	let modelFilter = $state("");
 	let activeProvider = $state<"hf" | "opencode">("hf");
@@ -151,6 +155,10 @@
 
 	function openPicker() {
 		if (disabled) return;
+		if (triggerEl) {
+			const rect = triggerEl.getBoundingClientRect();
+			popupStyle = `bottom: ${window.innerHeight - rect.top + 8}px; left: ${rect.left}px;`;
+		}
 		isOpen = true;
 		modelFilter = "";
 		activeProvider = "hf";
@@ -204,7 +212,8 @@
 
 	function handleWindowPointer(event: MouseEvent) {
 		if (!isOpen || !rootEl) return;
-		if (rootEl.contains(event.target as Node)) return;
+		const target = event.target as Node;
+		if (rootEl.contains(target) || popupEl?.contains(target)) return;
 		closePicker();
 	}
 
@@ -274,6 +283,7 @@
 
 <div class="relative" bind:this={rootEl}>
 	<button
+		bind:this={triggerEl}
 		type="button"
 		class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200 {disabled
 			? 'cursor-not-allowed opacity-50'
@@ -309,8 +319,11 @@
 	</button>
 
 	{#if isOpen}
+		<Portal>
 		<div
-			class="absolute bottom-full left-0 z-50 mb-2 w-80 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+			bind:this={popupEl}
+			class="fixed z-50 w-80 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+			style={popupStyle}
 			role="dialog"
 			aria-label="Model selector"
 		>
@@ -486,5 +499,6 @@
 				</div>
 			</div>
 		</div>
+		</Portal>
 	{/if}
 </div>
