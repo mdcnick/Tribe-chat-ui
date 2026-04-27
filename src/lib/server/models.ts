@@ -484,7 +484,24 @@ const buildModels = async (): Promise<ProcessedModel[]> => {
 							}));
 					})
 				);
-				builtModels.push(...opencodeModels);
+				for (const m of opencodeModels) {
+					const existing = builtModels.find((b) => b.id === m.id);
+					if (existing) {
+						const providers = Array.isArray(existing.providers) ? [...existing.providers] : [];
+						const alreadyHasOpencode = providers.some(
+							(p) =>
+								typeof p === "object" &&
+								p !== null &&
+								(p as { provider?: string }).provider === "opencode"
+						);
+						if (!alreadyHasOpencode) {
+							providers.push({ provider: "opencode" });
+							(existing as { providers?: unknown[] }).providers = providers;
+						}
+					} else {
+						builtModels.push(m);
+					}
+				}
 			}
 		}
 

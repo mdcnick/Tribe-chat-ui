@@ -6,6 +6,51 @@ import { config } from "dotenv";
 
 config({ path: "./.env.local" });
 
+// SvelteKit 2.58 references compile-time tokens (`__SVELTEKIT_PAYLOAD__` etc.)
+// in its runtime client files. Vite is supposed to replace these via the kit
+// plugin's `define` map, but in this project the substitution doesn't reach
+// `@sveltejs/kit/src/runtime/app/paths/internal/client.js` and
+// `@sveltejs/kit/src/runtime/client/client.js` when they're served raw from
+// node_modules (they're in `optimizeDeps.exclude`). The unreplaced tokens
+// throw a ReferenceError at hydration time, which kills *all* client-side
+// interactivity — including the model picker click handler.
+//
+// We patch those two files in a Vite transform so the dev/build runtime gets
+// the same substitutions the kit plugin would have applied.
+function patchSvelteKitRuntimeDefines() {
+	const SVELTEKIT_RUNTIME_RE =
+		/@sveltejs[\\/]+kit[\\/]+src[\\/]+runtime[\\/]+(app[\\/]+paths[\\/]+internal[\\/]+client|client[\\/]+client)\.js$/;
+	const replacements: Record<string, string> = {
+		__SVELTEKIT_PAYLOAD__: "globalThis.__sveltekit_dev",
+		__SVELTEKIT_PATHS_BASE__: '""',
+		__SVELTEKIT_PATHS_ASSETS__: '""',
+		__SVELTEKIT_PATHS_RELATIVE__: "true",
+		__SVELTEKIT_APP_DIR__: '"_app"',
+		__SVELTEKIT_HASH_ROUTING__: "false",
+		__SVELTEKIT_CLIENT_ROUTING__: "true",
+		__SVELTEKIT_EMBEDDED__: "false",
+		__SVELTEKIT_FORK_PRELOADS__: "false",
+		__SVELTEKIT_SERVER_TRACING_ENABLED__: "false",
+		__SVELTEKIT_EXPERIMENTAL_USE_TRANSFORM_ERROR__: "false",
+		__SVELTEKIT_APP_VERSION_POLL_INTERVAL__: "0",
+		__SVELTEKIT_HAS_SERVER_LOAD__: "true",
+		__SVELTEKIT_HAS_UNIVERSAL_LOAD__: "true",
+	};
+	return {
+		name: "patch-sveltekit-runtime-defines",
+		enforce: "pre" as const,
+		transform(code: string, id: string) {
+			const cleanId = id.split("?")[0];
+			if (!SVELTEKIT_RUNTIME_RE.test(cleanId)) return null;
+			let out = code;
+			for (const [token, value] of Object.entries(replacements)) {
+				out = out.split(token).join(value);
+			}
+			return out === code ? null : { code: out, map: null };
+		},
+	};
+}
+
 // used to load fonts server side for thumbnail generation
 function loadTTFAsArrayBuffer() {
 	return {
@@ -21,6 +66,7 @@ function loadTTFAsArrayBuffer() {
 }
 export default defineConfig({
 	plugins: [
+		patchSvelteKitRuntimeDefines(),
 		sveltekit(),
 		Icons({
 			compiler: "svelte",
