@@ -214,6 +214,18 @@ export async function endpointOai(
 				}
 			}
 
+			// Suppress inline reasoning for models that output chain-of-thought in content
+			const noReasoningInstruction =
+				"Do not show your reasoning process or thinking steps. Provide only the final answer directly.";
+			if (messagesOpenAI.length > 0 && messagesOpenAI[0]?.role === "system") {
+				messagesOpenAI[0].content =
+					(typeof messagesOpenAI[0].content === "string" ? messagesOpenAI[0].content : "") +
+					"\n\n" +
+					noReasoningInstruction;
+			} else {
+				messagesOpenAI = [{ role: "system", content: noReasoningInstruction }, ...messagesOpenAI];
+			}
+
 			// Combine model defaults with request-specific parameters
 			const parameters = { ...model.parameters, ...generateSettings };
 
@@ -225,6 +237,8 @@ export async function endpointOai(
 				model: modelId,
 				messages: messagesOpenAI,
 				stream: streamingSupported,
+				// GLM models output chain-of-thought reasoning by default; disable it
+				...(modelId.startsWith("glm-") ? { enable_thinking: false } : {}),
 				// Support two different ways of specifying token limits depending on the model
 				...(useCompletionTokens
 					? { max_completion_tokens: parameters?.max_tokens }

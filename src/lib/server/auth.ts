@@ -11,7 +11,6 @@ import { collections } from "$lib/server/database";
 import { adminTokenManager } from "./adminToken";
 import {
 	authenticateClerkRequest,
-	clerkEnabled,
 	clerkLoginEnabled,
 	clerkSignInUrl,
 	getClerkUser,

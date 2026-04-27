@@ -78,7 +78,7 @@ export async function POST({ request }: { request: Request }) {
 		switch (event.type) {
 			case "checkout.session.completed": {
 				const session = event.data.object as Stripe.Checkout.Session;
-				const metadata = z.record(z.string().optional()).parse(session.metadata);
+				const metadata = z.record(z.string()).parse(session.metadata);
 				const userId = session.client_reference_id ?? getUserIdFromMetadata(metadata);
 				const customerId = getCustomerId(
 					session.customer as string | Stripe.Customer | Stripe.DeletedCustomer | null

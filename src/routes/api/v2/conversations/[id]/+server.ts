@@ -1,4 +1,5 @@
 import { error, type RequestHandler } from "@sveltejs/kit";
+import { z } from "zod";
 import { superjsonResponse } from "$lib/server/api/utils/superjsonResponse";
 import { requireAuth } from "$lib/server/api/utils/requireAuth";
 import { resolveConversation } from "$lib/server/api/utils/resolveConversation";

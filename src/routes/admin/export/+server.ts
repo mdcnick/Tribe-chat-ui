@@ -42,7 +42,7 @@ export async function POST({ request }) {
 	const writer = await parquet.ParquetWriter.openFile(schema, fileName);
 
 	let count = 0;
-	logger.info("Exporting conversations for model", model);
+	logger.info(`Exporting conversations for model ${model}`);
 
 	for await (const conversation of collections.settings.aggregate<{
 		title: string;
@@ -89,7 +89,7 @@ export async function POST({ request }) {
 		++count;
 
 		if (count % 1_000 === 0) {
-			logger.info("Exported", count, "conversations");
+			logger.info(`Exported ${count} conversations`);
 		}
 	}
 
@@ -134,13 +134,13 @@ export async function POST({ request }) {
 		++count;
 
 		if (count % 1_000 === 0) {
-			logger.info("Exported", count, "conversations");
+			logger.info(`Exported ${count} conversations`);
 		}
 	}
 
 	await writer.close();
 
-	logger.info("Uploading", fileName, "to Hugging Face Hub");
+	logger.info(`Uploading ${fileName} to Hugging Face Hub`);
 
 	await uploadFile({
 		file: pathToFileURL(fileName) as URL,

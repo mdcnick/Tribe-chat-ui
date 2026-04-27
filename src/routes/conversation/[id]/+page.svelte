@@ -110,7 +110,7 @@
 	// this function is used to send new message to the backends
 	async function writeMessage({
 		prompt,
-		messageId = messagesPath.at(-1)?.id ?? undefined,
+		messageId = messagesPath.at(-1)?.id ?? messages.at(-1)?.id ?? undefined,
 		isRetry = false,
 	}: {
 		prompt?: string;
@@ -519,7 +519,10 @@
 	onMount(async () => {
 		if ($pendingMessage) {
 			files = $pendingMessage.files;
-			await writeMessage({ prompt: $pendingMessage.content });
+			await writeMessage({
+				prompt: $pendingMessage.content,
+				messageId: data.messages.at(-1)?.id ?? data.rootMessageId,
+			});
 			$pendingMessage = undefined;
 		}
 
@@ -617,8 +620,8 @@
 	<title>{title}</title>
 </svelte:head>
 
-<div class="flex h-full w-full min-w-0">
-	<div class="flex h-full min-w-0 flex-1 flex-col">
+<div class="flex h-full min-h-0 w-full min-w-0">
+	<div class="flex h-full min-h-0 min-w-0 flex-1 flex-col">
 		<ChatWindow
 			loading={$loading}
 			{pending}

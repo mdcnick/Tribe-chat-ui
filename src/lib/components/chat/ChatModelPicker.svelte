@@ -260,6 +260,8 @@
 		return null;
 	}
 
+	let opencodeAvatarUrl = $derived(getOpencodeAvatarUrl());
+
 	function getModelCountForProvider(provider: "hf" | "opencode"): number {
 		if (provider === "hf") {
 			return availableModels.length;
@@ -356,8 +358,8 @@
 								class="absolute right-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-l bg-gray-900 dark:bg-gray-100"
 							></div>
 						{/if}
-						{#if getOpencodeAvatarUrl()}
-							<img src={getOpencodeAvatarUrl()!} alt="OpenCode" class="size-5 rounded-sm" />
+					{#if opencodeAvatarUrl}
+						<img src={opencodeAvatarUrl} alt="OpenCode" class="size-5 rounded-sm" />
 						{:else}
 							<span class="text-[10px] font-semibold uppercase">OC</span>
 						{/if}

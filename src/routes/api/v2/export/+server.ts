@@ -118,9 +118,9 @@ export const GET: RequestHandler = async ({ locals }) => {
 				const formattedAssistants = await Promise.all(
 					assistants.map(async (assistant) => {
 						if (assistant.avatar) {
-							const file = await collections.bucket.findOne({
-								filename: assistant._id.toString(),
-							});
+							const file = await collections.bucket
+								.find({ filename: assistant._id.toString() })
+								.next();
 
 							if (!file?._id) {
 								logger.warn(
@@ -204,7 +204,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 		});
 	}
 
-	return new Response(zipfile.outputStream as ReadableStream, {
+	return new Response(zipfile.outputStream as unknown as ReadableStream, {
 		headers: {
 			"Content-Type": "application/zip",
 			"Content-Disposition": 'attachment; filename="export.zip"',

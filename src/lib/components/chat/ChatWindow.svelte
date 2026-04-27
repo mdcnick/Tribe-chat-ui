@@ -256,7 +256,7 @@
 	let prevMessageCount = $state(0);
 	let prevFirstMessageId = $state<string | undefined>(undefined);
 	let forceReattach = $state(0);
-	let scrollBehavior: ScrollBehavior = $state("instant");
+	let scrollBehavior: "instant" | "auto" | "smooth" = $state("instant");
 	$effect(() => {
 		const firstMessageId = messages.at(0)?.id;
 
@@ -544,7 +544,7 @@
 	}}
 />
 
-<div class="relative min-h-0 min-w-0">
+<div class="relative h-full min-h-0 min-w-0">
 	{#if shareModalOpen}
 		<ShareConversationModal open={shareModalOpen} onclose={() => shareModal.close()} />
 	{/if}
@@ -554,7 +554,7 @@
 		bind:this={chatContainer}
 	>
 		<div
-			class="mx-auto flex h-full max-w-3xl flex-col gap-6 px-5 pt-6 sm:gap-8 xl:max-w-4xl xl:pt-10"
+			class="mx-auto flex min-h-full max-w-3xl flex-col gap-6 px-5 pt-6 sm:gap-8 xl:max-w-4xl xl:pt-10"
 		>
 			{#if preprompt && preprompt != currentModel.preprompt}
 				<SystemPromptModal preprompt={preprompt ?? ""} />

@@ -160,7 +160,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		} catch (error) {
 			httpError = error instanceof Error ? error : new Error(String(error));
 			lastError = httpError;
-			logger.warn(lastError.message, "Streamable HTTP failed, trying SSE transport...");
+			logger.warn(lastError.message + " - Streamable HTTP failed, trying SSE transport...");
 
 			// Close failed client
 			try {
@@ -229,8 +229,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 				// of the fallback SSE message.
 				if (httpError) {
 					lastError = new Error(
-						`HTTP transport failed: ${httpError.message}; SSE fallback failed: ${lastError.message}`,
-						{ cause: sseError instanceof Error ? sseError : undefined }
+						`HTTP transport failed: ${httpError.message}; SSE fallback failed: ${lastError.message}`
 					);
 				}
 				logger.error(lastError, "Both transports failed.");

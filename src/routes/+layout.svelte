@@ -216,11 +216,6 @@
 			: conversations.find((conv) => conv.id === page.params.id)?.title
 	);
 
-	// Show the welcome modal once on first app load
-	let showWelcome = $derived(
-		!$settings.welcomeModalSeen &&
-			!(page.data.shared === true && page.route.id?.startsWith("/conversation/"))
-	);
 </script>
 
 <svelte:head>
@@ -277,7 +272,7 @@
 	{/if}
 </svelte:head>
 
-{#if showWelcome}
+{#if false}
 	<WelcomeModal close={closeWelcomeModal} />
 {/if}
 

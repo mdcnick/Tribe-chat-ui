@@ -35,11 +35,9 @@ class PublicConfigManager {
 	}
 
 	get assetPath() {
+		const origin = this.#configStore.PUBLIC_ORIGIN || page.url.origin;
 		return (
-			(this.#configStore.PUBLIC_ORIGIN || page.url.origin) +
-			base +
-			"/" +
-			(this.#configStore.PUBLIC_APP_ASSETS || "chatui")
+			origin.replace(/\/+$/, "") + base + "/" + (this.#configStore.PUBLIC_APP_ASSETS || "chatui")
 		);
 	}
 }

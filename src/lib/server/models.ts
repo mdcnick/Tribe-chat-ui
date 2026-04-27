@@ -303,69 +303,108 @@ const buildModels = async (): Promise<ProcessedModel[]> => {
 	}
 
 	try {
-		const baseURL = openaiBaseUrl;
-		logger.info({ baseURL }, "[models] Using OpenAI-compatible base URL");
+		let modelsRaw: ModelConfig[] = [];
 
-		// Canonical auth token is OPENAI_API_KEY; keep HF_TOKEN as legacy alias
-		const authToken = config.OPENAI_API_KEY || config.HF_TOKEN;
+		try {
+			const baseURL = openaiBaseUrl;
+			logger.info({ baseURL }, "[models] Using OpenAI-compatible base URL");
 
-		// Use auth token from the start if available to avoid rate limiting issues
-		// Some APIs rate-limit unauthenticated requests more aggressively
-		const response = await fetch(`${baseURL}/models`, {
-			headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
-		});
-		logger.info({ status: response.status }, "[models] First fetch status");
-		if (!response.ok && response.status === 401 && !authToken) {
-			// If we get 401 and didn't have a token, there's nothing we can do
-			throw new Error(
-				`Failed to fetch ${baseURL}/models: ${response.status} ${response.statusText} (no auth token available)`
-			);
-		}
-		if (!response.ok) {
-			throw new Error(
-				`Failed to fetch ${baseURL}/models: ${response.status} ${response.statusText}`
-			);
-		}
-		const json = await response.json();
-		logger.info({ keys: Object.keys(json || {}) }, "[models] Response keys");
+			// Canonical auth token is OPENAI_API_KEY; keep HF_TOKEN as legacy alias
+			const authToken = config.OPENAI_API_KEY || config.HF_TOKEN;
 
-		const parsed = listSchema.parse(json);
-		logger.info({ count: parsed.data.length }, "[models] Parsed models count");
-
-		let modelsRaw = parsed.data.map((m) => {
-			let logoUrl: string | undefined = undefined;
-			if (isHFRouter && m.id.includes("/")) {
-				const org = m.id.split("/")[0];
-				logoUrl = `https://huggingface.co/api/avatars/${encodeURIComponent(org)}`;
+			// Use auth token from the start if available to avoid rate limiting issues
+			// Some APIs rate-limit unauthenticated requests more aggressively
+			const response = await fetch(`${baseURL}/models`, {
+				headers: authToken ? { Authorization: `Bearer ${authToken}` } : undefined,
+			});
+			logger.info({ status: response.status }, "[models] First fetch status");
+			if (!response.ok && response.status === 401 && !authToken) {
+				// If we get 401 and didn't have a token, there's nothing we can do
+				throw new Error(
+					`Failed to fetch ${baseURL}/models: ${response.status} ${response.statusText} (no auth token available)`
+				);
 			}
+			if (!response.ok) {
+				throw new Error(
+					`Failed to fetch ${baseURL}/models: ${response.status} ${response.statusText}`
+				);
+			}
+			const json = await response.json();
+			logger.info({ keys: Object.keys(json || {}) }, "[models] Response keys");
 
-			const inputModalities = (m.architecture?.input_modalities ?? []).map((modality) =>
-				modality.toLowerCase()
+			const parsed = listSchema.parse(json);
+			logger.info({ count: parsed.data.length }, "[models] Parsed models count");
+
+			modelsRaw = parsed.data.map((m) => {
+				let logoUrl: string | undefined = undefined;
+				if (isHFRouter && m.id.includes("/")) {
+					const org = m.id.split("/")[0];
+					logoUrl = `https://huggingface.co/api/avatars/${encodeURIComponent(org)}`;
+				}
+
+				const inputModalities = (m.architecture?.input_modalities ?? []).map((modality) =>
+					modality.toLowerCase()
+				);
+				const supportsImageInput =
+					inputModalities.includes("image") || inputModalities.includes("vision");
+
+				// If any provider supports tools, consider the model as supporting tools
+				const supportsTools = Boolean((m.providers ?? []).some((p) => p?.supports_tools === true));
+				return {
+					id: m.id,
+					name: m.id,
+					displayName: m.id,
+					description: m.description,
+					logoUrl,
+					providers: m.providers,
+					multimodal: supportsImageInput,
+					multimodalAcceptedMimetypes: supportsImageInput ? ["image/*"] : undefined,
+					supportsTools,
+					endpoints: [
+						{
+							type: "openai" as const,
+							baseURL,
+							// apiKey will be taken from OPENAI_API_KEY or HF_TOKEN automatically
+						},
+					],
+				} as ModelConfig;
+			}) as ModelConfig[];
+		} catch (error) {
+			logger.warn(
+				{ error },
+				"[models] Failed to fetch models from OPENAI_BASE_URL, continuing with empty list"
 			);
-			const supportsImageInput =
-				inputModalities.includes("image") || inputModalities.includes("vision");
+		}
 
-			// If any provider supports tools, consider the model as supporting tools
-			const supportsTools = Boolean((m.providers ?? []).some((p) => p?.supports_tools === true));
-			return {
-				id: m.id,
-				name: m.id,
-				displayName: m.id,
-				description: m.description,
-				logoUrl,
-				providers: m.providers,
-				multimodal: supportsImageInput,
-				multimodalAcceptedMimetypes: supportsImageInput ? ["image/*"] : undefined,
-				supportsTools,
-				endpoints: [
-					{
-						type: "openai" as const,
-						baseURL,
-						// apiKey will be taken from OPENAI_API_KEY or HF_TOKEN automatically
-					},
-				],
-			} as ModelConfig;
-		}) as ModelConfig[];
+		// Fallback: if no models were fetched, use OPENAI_MODELS env var if set
+		if (modelsRaw.length === 0) {
+			const openaiModelsEnv = (config.OPENAI_MODELS || "").trim();
+			if (openaiModelsEnv) {
+				let openaiModelIds: string[];
+				try {
+					openaiModelIds = JSON5.parse(sanitizeJSONEnv(openaiModelsEnv, "[]"));
+				} catch {
+					openaiModelIds = openaiModelsEnv
+						.split(",")
+						.map((s) => s.trim())
+						.filter(Boolean);
+				}
+
+				if (Array.isArray(openaiModelIds) && openaiModelIds.length > 0) {
+					const baseURL = openaiBaseUrl;
+					modelsRaw = openaiModelIds.map((id) => ({
+						id,
+						name: id,
+						displayName: id,
+						endpoints: [{ type: "openai" as const, baseURL }],
+					})) as ModelConfig[];
+					logger.info(
+						{ count: modelsRaw.length },
+						"[models] Using OPENAI_MODELS env var as fallback"
+					);
+				}
+			}
+		}
 
 		const overrides = getModelOverrides();
 

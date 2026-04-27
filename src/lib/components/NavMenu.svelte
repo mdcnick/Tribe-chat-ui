@@ -31,6 +31,7 @@
 	import { enabledServersCount } from "$lib/stores/mcpServers";
 	import { isPro } from "$lib/stores/isPro";
 	import IconPro from "$lib/components/icons/IconPro.svelte";
+	import IconLoading from "$lib/components/icons/IconLoading.svelte";
 	import MCPServerManager from "./mcp/MCPServerManager.svelte";
 
 	const publicConfig = usePublicConfig();
@@ -117,6 +118,30 @@
 	let isDark = $state(false);
 	let unsubscribeTheme: (() => void) | undefined;
 	let showMcpModal = $state(false);
+	let isSpawningWorkspace = $state(false);
+	let workspaceError: string | null = $state(null);
+
+	async function handleOpenWorkspace() {
+		if (isSpawningWorkspace) return;
+		isSpawningWorkspace = true;
+		workspaceError = null;
+		try {
+			const res = await fetch(`${base}/api/v2/agent/spawn`, { method: "POST" });
+			if (!res.ok) {
+				const body = await res.text().catch(() => res.statusText);
+				throw new Error(body || `HTTP ${res.status}`);
+			}
+			const data = (await res.json()) as { desktopUrl?: string };
+			if (!data.desktopUrl) {
+				throw new Error("Spawn response missing desktopUrl");
+			}
+			window.open(data.desktopUrl, "_blank", "noopener,noreferrer");
+		} catch (err) {
+			workspaceError = err instanceof Error ? err.message : String(err);
+		} finally {
+			isSpawningWorkspace = false;
+		}
+	}
 
 	if (browser) {
 		unsubscribeTheme = subscribeToTheme(({ isDark: nextIsDark }) => {
@@ -293,6 +318,19 @@
 				</span>
 			{/if}
 		</button>
+		<button
+			onclick={handleOpenWorkspace}
+			disabled={isSpawningWorkspace}
+			class="flex h-9 flex-none items-center gap-1.5 rounded-lg pl-2 pr-2 text-gray-500 hover:bg-gray-100 disabled:cursor-wait disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-700 sm:h-[2.08rem]"
+		>
+			Open Workspace
+			{#if isSpawningWorkspace}
+				<IconLoading classNames="ml-auto" />
+			{/if}
+		</button>
+		{#if workspaceError}
+			<span class="px-2 pb-1 text-xs text-red-500" role="alert">{workspaceError}</span>
+		{/if}
 	{/if}
 
 	<span class="flex gap-1">

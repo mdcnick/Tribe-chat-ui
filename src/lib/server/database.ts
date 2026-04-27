@@ -189,6 +189,7 @@ export class Database {
 			tokenCaches,
 			config,
 			billingEntitlements,
+			agentSessions,
 		} = this.getCollections();
 
 		conversations

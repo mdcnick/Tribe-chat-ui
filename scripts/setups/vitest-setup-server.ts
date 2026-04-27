@@ -2,22 +2,18 @@ import { vi, afterAll } from "vitest";
 import dotenv from "dotenv";
 import { resolve } from "path";
 import fs from "fs";
-import { MongoMemoryServer } from "mongodb-memory-server";
 
-let mongoServer: MongoMemoryServer;
 // Load the .env file
 const envPath = resolve(__dirname, "../../.env");
 dotenv.config({ path: envPath });
 
-// Read the .env file content
-const envContent = fs.readFileSync(envPath, "utf-8");
-
 // Parse the .env content
+const envContent = fs.readFileSync(envPath, "utf-8");
 const envVars = dotenv.parse(envContent);
 
 // Separate public and private variables
-const publicEnv = {};
-const privateEnv = {};
+const publicEnv: Record<string, string> = {};
+const privateEnv: Record<string, string> = {};
 
 for (const [key, value] of Object.entries(envVars)) {
 	if (key.startsWith("PUBLIC_")) {
@@ -27,18 +23,32 @@ for (const [key, value] of Object.entries(envVars)) {
 	}
 }
 
+// Store the mongo server reference for cleanup
+let mongoServer: import("mongodb-memory-server").MongoMemoryServer | null = null;
+
+// We need to set up the mock in a way that doesn't get hoisted prematurely
+// Use a factory function that vitest will call at the right time
 vi.mock("$env/dynamic/public", () => ({
 	env: publicEnv,
 }));
 
-vi.mock("$env/dynamic/private", async () => {
-	mongoServer = await MongoMemoryServer.create();
+// For private env, we need to create the mongo server lazily
+// to avoid port conflicts and hoisting issues
+let privateEnvWithMongo: Record<string, string> = { ...privateEnv };
 
-	return {
-		env: {
+vi.mock("$env/dynamic/private", async () => {
+	// Only create mongo server once
+	if (!mongoServer) {
+		const { MongoMemoryServer } = await import("mongodb-memory-server");
+		mongoServer = await MongoMemoryServer.create();
+		privateEnvWithMongo = {
 			...privateEnv,
 			MONGODB_URL: mongoServer.getUri(),
-		},
+		};
+	}
+
+	return {
+		env: privateEnvWithMongo,
 	};
 });
 
