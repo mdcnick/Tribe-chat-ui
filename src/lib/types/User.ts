@@ -1,7 +1,7 @@
 import type { ObjectId } from "mongodb";
 import type { Timestamps } from "./Timestamps";
 
-export type AuthProvider = "clerk" | "legacy-oidc" | "trusted-header";
+export type AuthProvider = "better-auth" | "legacy-oidc" | "trusted-header";
 
 export interface User extends Timestamps {
 	_id: ObjectId;

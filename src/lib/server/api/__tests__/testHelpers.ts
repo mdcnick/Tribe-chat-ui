@@ -29,8 +29,8 @@ export async function createTestUser(): Promise<{
 		username: `user-${userId.toString().slice(0, 8)}`,
 		name: "Test User",
 		avatarUrl: "https://example.com/avatar.png",
-		authProvider: "clerk",
-		authSubject: `clerk-${userId.toString()}`,
+		authProvider: "better-auth",
+		authSubject: `better-auth-${userId.toString()}`,
 		hfUserId: `hf-${userId.toString()}`,
 	};
 

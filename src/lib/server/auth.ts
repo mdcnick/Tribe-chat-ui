@@ -8,20 +8,13 @@ import { ObjectId } from "mongodb";
 import JSON5 from "json5";
 import { z } from "zod";
 import { collections } from "$lib/server/database";
+import { DEFAULT_SETTINGS } from "$lib/types/Settings";
 import { adminTokenManager } from "./adminToken";
-import {
-	authenticateClerkRequest,
-	clerkLoginEnabled,
-	clerkSignInUrl,
-	getClerkUser,
-	mapClerkSessionClaimsProfile,
-	mapClerkUserProfile,
-} from "./clerk";
+import { betterAuthEnabled, getBetterAuth, mapBetterAuthUser } from "./betterAuth";
 import { config } from "$lib/server/config";
 import { logger } from "$lib/server/logger";
 import type { User } from "$lib/types/User";
 import { sha256 } from "$lib/utils/sha256";
-import { syncAuthenticatedUser } from "./syncAuthenticatedUser";
 
 const sameSite = z
 	.enum(["lax", "none", "strict"])
@@ -51,9 +44,9 @@ const allowedUserDomains = z
 	.default([])
 	.parse(JSON5.parse(sanitizeJSONEnv(config.ALLOWED_USER_DOMAINS, "[]")));
 
-export const loginEnabled = clerkLoginEnabled;
+export const loginEnabled = betterAuthEnabled;
 
-function sanitizeReturnPath(path: string | undefined | null): string | undefined {
+export function sanitizeReturnPath(path: string | undefined | null): string | undefined {
 	if (!path) {
 		return undefined;
 	}
@@ -154,16 +147,66 @@ function getSafeNext(url: URL): string {
 	return sanitizeReturnPath(url.searchParams.get("next")) ?? `${base}/`;
 }
 
-function getClerkSignInTarget(next: string, url: URL) {
-	const signInUrl = clerkSignInUrl;
-	if (!signInUrl) {
-		throw error(503, "Clerk login is not configured. Set PUBLIC_CLERK_SIGN_IN_URL.");
+/** Upsert our MongoDB user record for a Better Auth session. Migrates anonymous data on first sign-in. */
+async function syncBetterAuthUser(
+	profile: {
+		authProvider: "better-auth";
+		authSubject: string;
+		email: string;
+		name: string;
+		avatarUrl?: string;
+	},
+	anonymousSessionId: string | undefined
+): Promise<User> {
+	const { authProvider, authSubject, email, name, avatarUrl } = profile;
+	const now = new Date();
+
+	let user = await collections.users.findOne({ authProvider, authSubject });
+	const patch = { email, name, avatarUrl, updatedAt: now, authProvider, authSubject };
+
+	if (user) {
+		await collections.users.updateOne({ _id: user._id }, { $set: patch });
+		user = { ...user, ...patch };
+	} else {
+		const newUser: User = {
+			_id: new ObjectId(),
+			createdAt: now,
+			...patch,
+		};
+		const insert = await collections.users.insertOne(newUser);
+		user = { ...newUser, _id: insert.insertedId };
 	}
 
-	const redirectUrl = new URL(next, config.PUBLIC_ORIGIN || url.origin).toString();
-	const target = new URL(signInUrl);
-	target.searchParams.set("redirect_url", redirectUrl);
-	return target.toString();
+	if (anonymousSessionId) {
+		const settingsForUser = await collections.settings.findOne({ userId: user._id });
+		if (!settingsForUser) {
+			const { matchedCount } = await collections.settings.updateOne(
+				{ sessionId: anonymousSessionId },
+				{ $set: { userId: user._id, updatedAt: now }, $unset: { sessionId: "" } }
+			);
+			if (!matchedCount) {
+				await collections.settings.insertOne({
+					userId: user._id,
+					updatedAt: now,
+					createdAt: now,
+					...DEFAULT_SETTINGS,
+				});
+			}
+		}
+
+		const { modifiedCount } = await collections.conversations.updateMany(
+			{ sessionId: anonymousSessionId, userId: { $exists: false } },
+			{ $set: { userId: user._id }, $unset: { sessionId: "" } }
+		);
+		if (modifiedCount > 0) {
+			logger.info(
+				{ userId: user._id.toString(), migratedConversationCount: modifiedCount },
+				"Migrated anonymous conversations to authenticated user"
+			);
+		}
+	}
+
+	return user;
 }
 
 export async function authenticateRequest(
@@ -171,7 +214,7 @@ export async function authenticateRequest(
 	cookie: Cookies,
 	url: URL,
 	isApi?: boolean
-): Promise<App.Locals & { secretSessionId: string; clerkResponseHeaders?: Headers }> {
+): Promise<App.Locals & { secretSessionId: string }> {
 	const token = cookie.get(config.COOKIE_NAME);
 
 	let email = null;
@@ -191,54 +234,38 @@ export async function authenticateRequest(
 		};
 	}
 
-	const clerkAuth = await authenticateClerkRequest(request, url);
-	if (clerkAuth.isAuthenticated && clerkAuth.clerkUserId) {
-		let profile = mapClerkSessionClaimsProfile(clerkAuth.clerkUserId, clerkAuth.sessionClaims);
+	if (betterAuthEnabled) {
+		try {
+			const ba = await getBetterAuth();
+			const baSession = await ba.api.getSession({ headers: request.headers });
 
-		if (config.CLERK_SECRET_KEY) {
-			try {
-				const clerkUser = await getClerkUser(clerkAuth.clerkUserId);
-				profile = mapClerkUserProfile(clerkUser);
-			} catch (err) {
-				logger.warn(
-					{ err, clerkUserId: clerkAuth.clerkUserId },
-					"Falling back to Clerk session claims because getUser() failed"
-				);
+			if (baSession?.user) {
+				const profile = mapBetterAuthUser(baSession.user);
+
+				if (!isAllowedAuthenticatedEmail(profile.email)) {
+					logger.warn(
+						{ authSubject: profile.authSubject, email: profile.email },
+						"Blocked Better Auth user"
+					);
+					throw error(403, "User not allowed");
+				}
+
+				const anonymousSessionId = token ? await sha256(token) : undefined;
+				const user = await syncBetterAuthUser(profile, anonymousSessionId);
+
+				return {
+					user,
+					sessionId: baSession.session.id,
+					secretSessionId: baSession.session.token,
+					isAdmin: user.isAdmin ?? false,
+				};
 			}
+		} catch (err) {
+			if (err && typeof err === "object" && "status" in err) {
+				throw err;
+			}
+			logger.warn(err, "Failed to validate Better Auth session");
 		}
-
-		if (!isAllowedAuthenticatedEmail(profile.email)) {
-			logger.warn(
-				{ clerkUserId: clerkAuth.clerkUserId, email: profile.email },
-				"Blocked Clerk user"
-			);
-			throw error(403, "User not allowed");
-		}
-
-		const synced = await syncAuthenticatedUser({
-			...profile,
-			cookies: cookie,
-			currentSessionId: sessionId,
-			currentSecretSessionId: secretSessionId,
-			locals: {
-				sessionId,
-				isAdmin: false,
-			},
-			userAgent: request.headers.get("user-agent") ?? undefined,
-			ip: undefined,
-		});
-
-		return {
-			user: synced.user,
-			sessionId: synced.sessionId,
-			secretSessionId: synced.secretSessionId,
-			isAdmin: synced.user.isAdmin ?? false,
-			clerkResponseHeaders: clerkAuth.responseHeaders,
-			clerkAuth: {
-				clerkUserId: clerkAuth.clerkUserId,
-				clerkSessionId: clerkAuth.clerkSessionId,
-			},
-		};
 	}
 
 	if (token) {
@@ -264,7 +291,6 @@ export async function authenticateRequest(
 				sessionId,
 				secretSessionId,
 				isAdmin: result.user.isAdmin ?? false,
-				clerkResponseHeaders: clerkAuth.responseHeaders,
 			};
 		} else if (result.invalidateSession) {
 			secretSessionId = crypto.randomUUID();
@@ -274,9 +300,7 @@ export async function authenticateRequest(
 	}
 
 	if (isApi && request.headers.get("Authorization")?.startsWith("Bearer ")) {
-		logger.warn(
-			"Ignoring deprecated bearer-token auth path because Clerk is the canonical provider"
-		);
+		logger.warn("Ignoring deprecated bearer-token auth — Better Auth is the canonical provider");
 	}
 
 	return {
@@ -284,12 +308,12 @@ export async function authenticateRequest(
 		sessionId,
 		secretSessionId,
 		isAdmin: false,
-		clerkResponseHeaders: clerkAuth.responseHeaders,
 	};
 }
 
 export async function triggerLoginFlow({ url }: RequestEvent): Promise<Response> {
-	throw redirect(302, getClerkSignInTarget(getSafeNext(url), url));
+	const next = getSafeNext(url);
+	throw redirect(302, `${base}/login?next=${encodeURIComponent(next)}`);
 }
 
 export async function handleLegacyLoginCallback({ url }: RequestEvent): Promise<Response> {

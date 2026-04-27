@@ -8,7 +8,7 @@ import { findUser } from "$lib/server/auth";
 import { syncAuthenticatedUser } from "$lib/server/syncAuthenticatedUser";
 
 const profile = {
-	authProvider: "clerk" as const,
+	authProvider: "better-auth" as const,
 	authSubject: "user_1234567890",
 	username: "new-username",
 	name: "name",

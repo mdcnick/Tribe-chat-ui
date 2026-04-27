@@ -38,7 +38,7 @@
 		"flex items-center justify-between gap-3 rounded-[20px] px-4 py-3 text-sm text-gray-600 transition-colors hover:bg-gray-50/80 dark:text-gray-300 dark:hover:bg-gray-700/30";
 
 	const authProviderLabels = {
-		clerk: "Clerk",
+		"better-auth": "Email",
 		"legacy-oidc": "Legacy OIDC",
 		"trusted-header": "Trusted Header",
 	} as const;
@@ -112,11 +112,7 @@
 	const providerLabel = $derived(
 		getProviderLabel(user?.authProvider as keyof typeof authProviderLabels | undefined)
 	);
-	const providerBadgeClass = $derived(
-		user?.authProvider === "clerk"
-			? "bg-emerald-500/10 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-			: "bg-gray-900/6 text-gray-700 dark:bg-white/10 dark:text-gray-200"
-	);
+	const providerBadgeClass = "bg-gray-900/6 text-gray-700 dark:bg-white/10 dark:text-gray-200";
 	const loginHref = $derived(
 		`${base}/login?next=${encodeURIComponent(page.url.pathname + page.url.search)}`
 	);

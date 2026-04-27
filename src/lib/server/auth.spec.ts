@@ -3,50 +3,28 @@ import type { Cookies } from "@sveltejs/kit";
 import { collections } from "$lib/server/database";
 import { cleanupTestData } from "./api/__tests__/testHelpers";
 
-const authenticateClerkRequestMock = vi.fn();
-const getClerkUserMock = vi.fn();
+const getSessionMock = vi.fn();
 
-vi.mock("./clerk", () => ({
-	clerkEnabled: true,
-	clerkLoginEnabled: true,
-	clerkSignInUrl: "https://accounts.example.com/sign-in",
-	clerkSignUpUrl: "https://accounts.example.com/sign-up",
-	authenticateClerkRequest: authenticateClerkRequestMock,
-	getClerkUser: getClerkUserMock,
-	mapClerkUserProfile: (user: {
+vi.mock("./betterAuth", () => ({
+	betterAuthEnabled: true,
+	getBetterAuth: vi.fn(() =>
+		Promise.resolve({
+			api: {
+				getSession: getSessionMock,
+			},
+		})
+	),
+	mapBetterAuthUser: (user: {
 		id: string;
-		username?: string | null;
-		fullName?: string | null;
-		firstName?: string | null;
-		lastName?: string | null;
-		imageUrl?: string;
-		primaryEmailAddress?: { emailAddress: string } | null;
-		emailAddresses?: Array<{ emailAddress: string }>;
+		email: string;
+		name: string;
+		image?: string | null;
 	}) => ({
-		authProvider: "clerk" as const,
+		authProvider: "better-auth" as const,
 		authSubject: user.id,
-		username: user.username ?? user.primaryEmailAddress?.emailAddress.split("@")[0] ?? undefined,
-		name:
-			user.fullName ??
-			[user.firstName, user.lastName].filter((part): part is string => !!part).join(" ") ??
-			user.id,
-		email: user.primaryEmailAddress?.emailAddress ?? user.emailAddresses?.[0]?.emailAddress,
-		avatarUrl: user.imageUrl,
-	}),
-	mapClerkSessionClaimsProfile: (clerkUserId: string, claims?: Record<string, unknown>) => ({
-		authProvider: "clerk" as const,
-		authSubject: clerkUserId,
-		username:
-			(typeof claims?.username === "string" && claims.username) ||
-			(typeof claims?.email === "string" && claims.email.split("@")[0]) ||
-			undefined,
-		name:
-			(typeof claims?.name === "string" && claims.name) ||
-			(typeof claims?.username === "string" && claims.username) ||
-			(typeof claims?.email === "string" && claims.email) ||
-			clerkUserId,
-		email: typeof claims?.email === "string" ? claims.email : undefined,
-		avatarUrl: typeof claims?.picture === "string" ? claims.picture : undefined,
+		email: user.email,
+		name: user.name,
+		avatarUrl: user.image ?? undefined,
 	}),
 }));
 
@@ -61,35 +39,24 @@ function createCookiesMock(): Cookies {
 	} as unknown as Cookies;
 }
 
-describe("authenticateRequest with Clerk", () => {
+describe("authenticateRequest with Better Auth", () => {
 	beforeEach(async () => {
 		await cleanupTestData();
-		authenticateClerkRequestMock.mockReset();
-		getClerkUserMock.mockReset();
+		getSessionMock.mockReset();
 	});
 
-	it("creates a Mongo user on the first authenticated request", async () => {
-		authenticateClerkRequestMock.mockResolvedValue({
-			isAuthenticated: true,
-			status: "signed-in",
-			clerkUserId: "user_test_123",
-			clerkSessionId: "sess_test_123",
-			sessionClaims: {
+	it("creates a MongoDB user on the first authenticated request", async () => {
+		getSessionMock.mockResolvedValue({
+			user: {
+				id: "ba_user_123",
 				email: "test@example.com",
-				username: "test-user",
 				name: "Test User",
-				picture: "https://example.com/avatar.png",
+				image: "https://example.com/avatar.png",
 			},
-		});
-		getClerkUserMock.mockResolvedValue({
-			id: "user_test_123",
-			username: "test-user",
-			fullName: "Test User",
-			firstName: "Test",
-			lastName: "User",
-			imageUrl: "https://example.com/avatar.png",
-			primaryEmailAddress: { emailAddress: "test@example.com" },
-			emailAddresses: [{ emailAddress: "test@example.com" }],
+			session: {
+				id: "session_123",
+				token: "token_abc",
+			},
 		});
 
 		const cookies = createCookiesMock();
@@ -100,42 +67,28 @@ describe("authenticateRequest with Clerk", () => {
 		);
 
 		const storedUser = await collections.users.findOne({
-			authProvider: "clerk",
-			authSubject: "user_test_123",
+			authProvider: "better-auth",
+			authSubject: "ba_user_123",
 		});
 
 		expect(storedUser).not.toBeNull();
 		expect(storedUser).toMatchObject({
-			authProvider: "clerk",
-			authSubject: "user_test_123",
+			authProvider: "better-auth",
+			authSubject: "ba_user_123",
 			email: "test@example.com",
-			username: "test-user",
+			name: "Test User",
 		});
 		expect(result.user?._id.toString()).toBe(storedUser?._id.toString());
 	});
 
-	it("reuses the same Mongo user on repeat authenticated requests", async () => {
-		authenticateClerkRequestMock.mockResolvedValue({
-			isAuthenticated: true,
-			status: "signed-in",
-			clerkUserId: "user_test_123",
-			clerkSessionId: "sess_test_123",
-			sessionClaims: {
+	it("reuses the same MongoDB user on repeat authenticated requests", async () => {
+		getSessionMock.mockResolvedValue({
+			user: {
+				id: "ba_user_123",
 				email: "test@example.com",
-				username: "test-user",
 				name: "Test User",
-				picture: "https://example.com/avatar.png",
 			},
-		});
-		getClerkUserMock.mockResolvedValue({
-			id: "user_test_123",
-			username: "test-user",
-			fullName: "Test User",
-			firstName: "Test",
-			lastName: "User",
-			imageUrl: "https://example.com/avatar.png",
-			primaryEmailAddress: { emailAddress: "test@example.com" },
-			emailAddresses: [{ emailAddress: "test@example.com" }],
+			session: { id: "session_123", token: "token_abc" },
 		});
 
 		const firstCookies = createCookiesMock();
@@ -153,67 +106,18 @@ describe("authenticateRequest with Clerk", () => {
 		);
 
 		const users = await collections.users
-			.find({
-				authProvider: "clerk",
-				authSubject: "user_test_123",
-			})
+			.find({ authProvider: "better-auth", authSubject: "ba_user_123" })
 			.toArray();
 
 		expect(users).toHaveLength(1);
 	});
 
-	it("creates a Mongo user from Clerk session claims when getUser is unavailable", async () => {
-		authenticateClerkRequestMock.mockResolvedValue({
-			isAuthenticated: true,
-			status: "signed-in",
-			clerkUserId: "user_claims_only",
-			clerkSessionId: "sess_claims_only",
-			sessionClaims: {
-				email: "claims@example.com",
-				username: "claims-user",
-				name: "Claims User",
-				picture: "https://example.com/claims-avatar.png",
-			},
-		});
-		getClerkUserMock.mockRejectedValue(new Error("missing secret key"));
+	it("returns unauthenticated when no session exists", async () => {
+		getSessionMock.mockResolvedValue(null);
 
 		const cookies = createCookiesMock();
-		const result = await authenticateRequest(
-			new Request("http://localhost/"),
-			cookies,
-			new URL("http://localhost/")
-		);
+		(cookies.get as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 
-		const storedUser = await collections.users.findOne({
-			authProvider: "clerk",
-			authSubject: "user_claims_only",
-		});
-
-		expect(storedUser).not.toBeNull();
-		expect(storedUser).toMatchObject({
-			authProvider: "clerk",
-			authSubject: "user_claims_only",
-			email: "claims@example.com",
-			username: "claims-user",
-			name: "Claims User",
-		});
-		expect(result.user?._id.toString()).toBe(storedUser?._id.toString());
-	});
-
-	it("preserves Clerk handshake headers for SSR auth completion", async () => {
-		const clerkHeaders = new Headers({
-			location:
-				"https://picked-filly-44.accounts.dev/v1/client/handshake?redirect_url=http://localhost/",
-			"x-clerk-auth-status": "handshake",
-		});
-
-		authenticateClerkRequestMock.mockResolvedValue({
-			isAuthenticated: false,
-			status: "handshake",
-			responseHeaders: clerkHeaders,
-		});
-
-		const cookies = createCookiesMock();
 		const result = await authenticateRequest(
 			new Request("http://localhost/"),
 			cookies,
@@ -221,7 +125,5 @@ describe("authenticateRequest with Clerk", () => {
 		);
 
 		expect(result.user).toBeUndefined();
-		expect(result.clerkResponseHeaders?.get("location")).toBe(clerkHeaders.get("location"));
-		expect(result.clerkResponseHeaders?.get("x-clerk-auth-status")).toBe("handshake");
 	});
 });

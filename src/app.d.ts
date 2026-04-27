@@ -13,10 +13,6 @@ declare global {
 			user?: User;
 			isAdmin: boolean;
 			token?: string;
-			clerkAuth?: {
-				clerkUserId: string;
-				clerkSessionId?: string;
-			};
 			/** Organization to bill inference requests to (from settings) */
 			billingOrganization?: string;
 			/** User-provided API key for the Opencode Go API */
