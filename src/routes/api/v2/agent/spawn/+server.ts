@@ -1,10 +1,6 @@
 import { json } from "@sveltejs/kit";
 import { spawnAgent } from "$lib/server/agent/spawn";
-import {
-	createAgentSession,
-	getAgentSession,
-	updateAgentSession,
-} from "$lib/server/agent/store";
+import { getAgentSession, upsertAgentSession } from "$lib/server/agent/store";
 import type { RequestHandler } from "./$types";
 
 export const POST: RequestHandler = async ({ locals }) => {
@@ -18,12 +14,17 @@ export const POST: RequestHandler = async ({ locals }) => {
 		return json(existing);
 	}
 
-	await updateAgentSession(userId, { status: "spawning" }).catch(() => {});
+	let spawned;
+	try {
+		spawned = await spawnAgent(userId);
+		if (!spawned.hostPorts?.desktop || !spawned.hostPorts?.ptyHttp || !spawned.hostPorts?.ptyWs) {
+			return json({ error: "Agent spawn returned invalid ports" }, { status: 500 });
+		}
+	} catch (e) {
+		return json({ error: "Failed to spawn agent" }, { status: 500 });
+	}
 
-	const spawned = await spawnAgent(userId);
-
-	const session = await createAgentSession({
-		userId,
+	const session = await upsertAgentSession(userId, {
 		containerId: spawned.containerId,
 		containerName: spawned.containerName,
 		desktopUrl: `http://localhost:${spawned.hostPorts.desktop}`,

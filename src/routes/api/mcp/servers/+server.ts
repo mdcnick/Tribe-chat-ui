@@ -1,5 +1,6 @@
 import type { MCPServer } from "$lib/types/Tool";
 import { config } from "$lib/server/config";
+import { logger } from "$lib/server/logger";
 
 export async function GET() {
 	// Parse MCP_SERVERS environment variable
@@ -13,7 +14,7 @@ export async function GET() {
 			servers = [];
 		}
 	} catch (error) {
-		console.error("Failed to parse MCP_SERVERS env variable:", error);
+		logger.error({ err: error }, "Failed to parse MCP_SERVERS env variable");
 		servers = [];
 	}
 

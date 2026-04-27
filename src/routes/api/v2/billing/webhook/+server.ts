@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type Stripe from "stripe";
 import { config } from "$lib/server/config";
 import { logger } from "$lib/server/logger";
@@ -45,6 +46,7 @@ async function applySubscriptionUpdate(subscription: Stripe.Subscription): Promi
 	});
 }
 
+// TODO: WARN-6 — add rate limiting for Stripe webhook endpoint
 export async function POST({ request }: { request: Request }) {
 	if (!isPaywallEnabled()) {
 		return new Response("ok");
@@ -76,9 +78,8 @@ export async function POST({ request }: { request: Request }) {
 		switch (event.type) {
 			case "checkout.session.completed": {
 				const session = event.data.object as Stripe.Checkout.Session;
-				const userId =
-					session.client_reference_id ??
-					getUserIdFromMetadata(session.metadata as Record<string, string> | undefined);
+				const metadata = z.record(z.string().optional()).parse(session.metadata);
+				const userId = session.client_reference_id ?? getUserIdFromMetadata(metadata);
 				const customerId = getCustomerId(
 					session.customer as string | Stripe.Customer | Stripe.DeletedCustomer | null
 				);
@@ -94,8 +95,10 @@ export async function POST({ request }: { request: Request }) {
 					const subscription = await stripe.subscriptions.retrieve(subscriptionId);
 					await applySubscriptionUpdate(subscription);
 				}
+
 				break;
 			}
+
 			case "customer.subscription.created":
 			case "customer.subscription.updated":
 			case "customer.subscription.deleted": {
@@ -103,6 +106,7 @@ export async function POST({ request }: { request: Request }) {
 				await applySubscriptionUpdate(subscription);
 				break;
 			}
+
 			default:
 				break;
 		}

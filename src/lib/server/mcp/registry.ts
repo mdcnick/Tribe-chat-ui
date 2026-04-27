@@ -44,10 +44,6 @@ function setServers(raw: string) {
 	cachedRaw = raw;
 	resetMcpToolsCache();
 	logger.debug({ count: cachedServers.length }, "[mcp] loaded server configuration");
-	console.log(
-		`[MCP] Loaded ${cachedServers.length} server(s):`,
-		cachedServers.map((s) => s.name).join(", ") || "none"
-	);
 }
 
 export function loadMcpServersOnStartup(): McpServerConfig[] {

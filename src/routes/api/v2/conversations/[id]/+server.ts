@@ -10,12 +10,12 @@ import { validModelIdSchema } from "$lib/server/models";
 export const GET: RequestHandler = async ({ locals, params, url }) => {
 	requireAuth(locals);
 
-	const conversation = await resolveConversation(
-		params.id ?? "",
-		locals,
-		url.searchParams.get("fromShare")
-	);
+	const fromShare = url.searchParams.get("fromShare");
+	if (fromShare && !z.string().length(7).safeParse(fromShare).success) {
+		error(400, "Invalid fromShare parameter");
+	}
 
+	const conversation = await resolveConversation(params.id ?? "", locals, fromShare);
 	return superjsonResponse({
 		messages: conversation.messages,
 		title: conversation.title,
