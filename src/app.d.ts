@@ -21,6 +21,15 @@ declare global {
 			billingOrganization?: string;
 			/** User-provided API key for the Opencode Go API */
 			opencodeApiKey?: string;
+			/** MCP server selection for the current request */
+			mcp?: {
+				selectedServerNames?: string[];
+				selectedServers?: Array<{
+					name: string;
+					url: string;
+					headers?: Record<string, string>;
+				}>;
+			};
 		}
 
 		interface Error {

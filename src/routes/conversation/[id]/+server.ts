@@ -168,7 +168,7 @@ export async function POST({ request, locals, params, getClientAddress }) {
 
 	// Attach MCP selection to locals so the text generation pipeline can consume it
 	try {
-		(locals as unknown as Record<string, unknown>).mcp = {
+		locals.mcp = {
 			selectedServerNames: selectedMcpServerNames,
 			selectedServers: (selectedMcpServers ?? []).map((s) => ({
 				name: s.name,
@@ -183,11 +183,15 @@ export async function POST({ request, locals, params, getClientAddress }) {
 		// ignore attachment errors, pipeline will just use env servers
 	}
 
+	const MAX_FILE_SIZE = 10 * 1024 * 1024;
 	const inputFiles = await Promise.all(
 		form
 			.getAll("files")
 			.filter((entry): entry is File => entry instanceof File && entry.size > 0)
 			.map(async (file) => {
+				if (file.size > MAX_FILE_SIZE) {
+					error(413, "File too large, should be <10MB");
+				}
 				const [type, ...name] = file.name.split(";");
 
 				return {
@@ -315,6 +319,8 @@ export async function POST({ request, locals, params, getClientAddress }) {
 		error(500, "Failed to create prompt");
 	}
 
+	// TODO: WARN-11 — consider $push with $slice or a separate messages collection
+	// to avoid O(n) writes and the 16MB MongoDB document limit for long conversations.
 	// update the conversation with the new messages
 	await collections.conversations.updateOne(
 		{ _id: convId },
@@ -523,15 +529,24 @@ export async function POST({ request, locals, params, getClientAddress }) {
 					if (clientDetached) return;
 					try {
 						controller.enqueue(JSON.stringify(event) + "\n");
-						if (event.type === MessageUpdateType.FinalAnswer) {
-							controller.enqueue(" ".repeat(4096));
-						}
 					} catch (err) {
 						clientDetached = true;
 						logger.info(
 							{ conversationId: convId.toString() },
 							"Client detached during message streaming"
 						);
+						return;
+					}
+					if (event.type === MessageUpdateType.FinalAnswer) {
+						try {
+							controller.enqueue(" ".repeat(4096));
+						} catch (err) {
+							clientDetached = true;
+							logger.info(
+								{ conversationId: convId.toString() },
+								"Client detached during padding enqueue"
+							);
+						}
 					}
 				};
 
