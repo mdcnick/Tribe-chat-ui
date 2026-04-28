@@ -37,6 +37,21 @@ export function rewriteDebugUrl(original: string): string {
 	}
 }
 
+function rewriteWebsocketUrl(original: string): string {
+	const baseURL = env.STEEL_BASE_URL;
+	if (!baseURL) return original;
+	try {
+		const url = new URL(original);
+		const base = new URL(baseURL);
+		url.protocol = base.protocol === "https:" ? "wss:" : "ws:";
+		url.hostname = base.hostname;
+		url.port = base.port;
+		return url.toString();
+	} catch {
+		return original;
+	}
+}
+
 export interface BrowserSession {
 	sessionId: string;
 	debugUrl: string;
@@ -57,11 +72,12 @@ export async function createSteelSession(options?: {
 		});
 
 		const debugUrl = rewriteDebugUrl(session.debugUrl);
+		const websocketUrl = rewriteWebsocketUrl(session.websocketUrl);
 		logger.debug({ sessionId: session.id, debugUrl }, "[steel] session created");
 		return {
 			sessionId: session.id,
 			debugUrl,
-			websocketUrl: session.websocketUrl,
+			websocketUrl,
 		};
 	} catch (err) {
 		logger.warn(
