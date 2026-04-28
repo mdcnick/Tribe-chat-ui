@@ -10,7 +10,7 @@
 	}
 
 	const IFRAME_LOAD_ERROR_MESSAGE =
-		"Couldn’t load the live browser. Try reloading or close the panel.";
+		"Couldn't load the live browser. Try reloading or close the panel.";
 
 	let { debugUrl, url, error, onClose }: Props = $props();
 
@@ -50,87 +50,79 @@
 	const visibleError = $derived(panelError ?? error);
 </script>
 
-<div class="flex h-full w-full flex-col bg-white dark:bg-gray-900">
-	<div
-		class="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-800"
-	>
-		<span
-			class="size-2 flex-none rounded-full {debugUrl && loaded
-				? 'bg-green-500'
-				: 'bg-gray-400'}"
-		></span>
-		<span class="min-w-0 flex-1 truncate text-xs text-gray-600 dark:text-gray-300"
-			>{headerLabel}</span
-		>
+<!-- No outer header bar — Steel's viewer already renders its own browser chrome.
+     Close and reload float as an overlay so they don't add a second chrome row. -->
+<div class="relative flex h-full w-full flex-col bg-gray-900">
+	<!-- Floating controls overlay (top-right corner) -->
+	<div class="absolute right-2 top-2 z-10 flex items-center gap-1">
+		{#if canRetry}
+			<button
+				type="button"
+				class="rounded bg-black/40 p-1.5 text-white backdrop-blur-sm hover:bg-black/60"
+				onclick={handleReload}
+				aria-label="Reload browser"
+				title="Reload"
+			>
+				<CarbonRenew class="size-3.5" />
+			</button>
+		{/if}
 		<button
 			type="button"
-			class="rounded p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700 disabled:opacity-40 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
-			onclick={handleReload}
-			disabled={!canRetry}
-			aria-label="Reload browser"
-			title="Reload"
-		>
-			<CarbonRenew class="size-4" />
-		</button>
-		<button
-			type="button"
-			class="rounded p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+			class="rounded bg-black/40 p-1.5 text-white backdrop-blur-sm hover:bg-black/60"
 			onclick={onClose}
 			aria-label="Close browser panel"
 			title="Close"
 		>
-			<CarbonClose class="size-4" />
+			<CarbonClose class="size-3.5" />
 		</button>
 	</div>
 
-	<div class="relative flex-1">
-		{#if visibleError}
-			<div class="flex h-full items-center justify-center bg-white p-6 dark:bg-gray-900">
-				<div class="flex max-w-sm flex-col items-center gap-3 text-center">
-					<p class="text-sm font-medium text-gray-900 dark:text-gray-100">Browser unavailable</p>
-					<p class="text-sm text-gray-500 dark:text-gray-400">{visibleError}</p>
-					<div class="flex items-center gap-2">
-						{#if canRetry}
-							<button
-								type="button"
-								class="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
-								onclick={handleReload}
-							>
-								<CarbonRenew class="size-4" />
-								Retry
-							</button>
-						{/if}
+	{#if visibleError}
+		<div class="flex h-full items-center justify-center bg-white p-6 dark:bg-gray-900">
+			<div class="flex max-w-sm flex-col items-center gap-3 text-center">
+				<p class="text-sm font-medium text-gray-900 dark:text-gray-100">Browser unavailable</p>
+				<p class="text-sm text-gray-500 dark:text-gray-400">{visibleError}</p>
+				<div class="flex items-center gap-2">
+					{#if canRetry}
 						<button
 							type="button"
-							class="inline-flex items-center rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
-							onclick={onClose}
+							class="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+							onclick={handleReload}
 						>
-							Close panel
+							<CarbonRenew class="size-4" />
+							Retry
 						</button>
-					</div>
+					{/if}
+					<button
+						type="button"
+						class="inline-flex items-center rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-gray-200"
+						onclick={onClose}
+					>
+						Close panel
+					</button>
 				</div>
 			</div>
-		{:else if debugUrl}
-			{#if !loaded}
-				<div class="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-900">
-					<div class="flex flex-col items-center gap-2">
-						<div
-							class="size-6 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600 dark:border-gray-600 dark:border-t-gray-300"
-						></div>
-						<span class="text-xs text-gray-500 dark:text-gray-400">Loading browser…</span>
-					</div>
+		</div>
+	{:else if debugUrl}
+		{#if !loaded}
+			<div class="absolute inset-0 flex items-center justify-center bg-gray-900">
+				<div class="flex flex-col items-center gap-2">
+					<div
+						class="size-6 animate-spin rounded-full border-2 border-gray-600 border-t-gray-300"
+					></div>
+					<span class="text-xs text-gray-400">Loading browser…</span>
 				</div>
-			{/if}
-			{#key iframeKey}
-				<iframe
-					src="/api/browser-viewer"
-					title="Live Browser"
-					class="h-full w-full"
-					onload={handleLoad}
-					onerror={handleIframeError}
-					sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-				></iframe>
-			{/key}
+			</div>
 		{/if}
-	</div>
+		{#key iframeKey}
+			<iframe
+				src="/api/browser-viewer"
+				title="Live Browser"
+				class="h-full w-full"
+				onload={handleLoad}
+				onerror={handleIframeError}
+				sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+			></iframe>
+		{/key}
+	{/if}
 </div>
