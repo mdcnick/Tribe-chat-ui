@@ -69,6 +69,7 @@ export async function createSteelSession(options?: {
 	try {
 		const session = await steel.sessions.create({
 			timeout: options?.timeoutMs ?? DEFAULT_STEEL_SESSION_TIMEOUT_MS,
+			solveCaptcha: true,
 		});
 
 		const debugUrl = rewriteDebugUrl(session.debugUrl);
