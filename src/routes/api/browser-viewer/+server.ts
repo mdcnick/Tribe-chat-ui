@@ -27,6 +27,21 @@ export async function GET() {
 	const wsBase = baseURL.replace(/^https:/, "wss:").replace(/^http:/, "ws:");
 	html = html.replace(/ws:\/\/0\.0\.0\.0:\d+/g, wsBase);
 
+	// The Steel viewer canvas uses height:100%/width:auto, causing it to overflow the
+	// panel width when the session viewport (1920×1080) is wider than the panel.
+	// Override canvas sizing so it scales to fit the panel width instead.
+	const cssOverride = `<style>
+.canvas-container { overflow: hidden !important; }
+.canvas {
+  position: static !important;
+  left: auto !important;
+  transform: none !important;
+  width: 100% !important;
+  height: auto !important;
+}
+</style>`;
+	html = html.replace("</head>", cssOverride + "</head>");
+
 	return new Response(html, {
 		headers: { "content-type": "text/html; charset=utf-8" },
 	});
