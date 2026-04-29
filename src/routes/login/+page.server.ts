@@ -1,64 +1,47 @@
 import { fail, redirect } from "@sveltejs/kit";
-import { base } from "$app/paths";
-import { loginEnabled, sanitizeReturnPath } from "$lib/server/auth";
-import { forwardBetterAuthCookies } from "$lib/server/betterAuth";
-import { config } from "$lib/server/config";
+import { loginWithPin } from "$lib/server/pinAuth";
+import { refreshSessionCookie } from "$lib/server/auth";
 import type { Actions, PageServerLoad } from "./$types";
-
-function sanitizeNext(raw: string | null): string {
-	return sanitizeReturnPath(raw) ?? `${base}/`;
-}
+import { base } from "$app/paths";
+import { loginEnabled } from "$lib/server/auth";
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (locals.user) {
-		throw redirect(302, sanitizeNext(url.searchParams.get("next")));
+		throw redirect(302, url.searchParams.get("next") || `${base}/`);
 	}
-
-	const githubEnabled = !!(config.GITHUB_CLIENT_ID && config.GITHUB_CLIENT_SECRET);
-	const googleEnabled = !!(config.GOOGLE_CLIENT_ID && config.GOOGLE_CLIENT_SECRET);
 
 	return {
 		loginEnabled,
-		githubEnabled,
-		googleEnabled,
-		next: sanitizeNext(url.searchParams.get("next")),
+		next: url.searchParams.get("next") || `${base}/`,
 		error: url.searchParams.get("error"),
-		message: url.searchParams.get("message"),
 	};
 };
 
 export const actions: Actions = {
-	default: async ({ request, fetch, url, cookies }) => {
-		const data = await request.formData();
-		const email = String(data.get("email") ?? "").trim();
-		const password = String(data.get("password") ?? "");
-		const next = sanitizeNext(data.get("next") as string | null);
+	default: async ({ request, cookies }) => {
+		const formData = await request.formData();
+		const username = (formData.get("username") as string)?.trim().toLowerCase();
+		const pin = formData.get("pin") as string;
+		const next = (formData.get("next") as string) || `${base}/`;
 
-		if (!email || !password) {
-			return fail(400, { error: "Email and password are required.", email });
+		if (!username || !pin) {
+			return fail(400, { error: "Username and PIN are required.", username });
 		}
 
-		if (!loginEnabled) {
-			return fail(503, { error: "Login is not configured.", email });
+		if (!/^\d{10}$/.test(pin)) {
+			return fail(400, { error: "PIN must be exactly 10 digits.", username });
 		}
 
-		const res = await fetch(`${url.origin}${base}/api/auth/sign-in/email`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ email, password }),
-		});
+		try {
+			const { secretSessionId } = await loginWithPin(username, pin);
+			refreshSessionCookie(cookies, secretSessionId);
 
-		if (!res.ok) {
-			const body = await res.json().catch(() => ({}));
-			const msg = (body as { message?: string })?.message ?? "";
-			return fail(401, {
-				error: msg || "Invalid email or password.",
-				email,
-			});
+			throw redirect(302, next);
+		} catch (err) {
+			// Re-throw SvelteKit redirects
+			if (err && typeof err === "object" && "status" in err) throw err;
+			const message = err instanceof Error ? err.message : "Login failed.";
+			return fail(401, { error: message, username });
 		}
-
-		forwardBetterAuthCookies(cookies, res);
-
-		throw redirect(302, next);
 	},
 };

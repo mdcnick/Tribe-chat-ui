@@ -165,33 +165,46 @@
 </script>
 
 <div
-	class="sticky top-0 flex flex-none touch-none items-center justify-between px-1.5 py-3.5 max-sm:pt-0"
+	class="sticky top-0 z-10 flex flex-none touch-none flex-col gap-3 bg-sidebar/85 px-3 pb-2 pt-4 backdrop-blur-md max-sm:pt-2"
 >
 	<a
-		class="flex select-none items-center rounded-xl text-lg font-semibold"
+		class="group flex select-none items-center gap-1 rounded-xl px-1 text-lg font-semibold text-sidebar-foreground"
 		href="{publicConfig.PUBLIC_ORIGIN}{base}/"
 	>
-		<Logo classNames="dark:invert mr-[2px]" />
-		{publicConfig.PUBLIC_APP_NAME}
+		<Logo classNames="mr-[2px] transition-transform group-hover:scale-110" />
+		<span class="font-display text-[1.55rem] leading-none tracking-tight"
+			>{publicConfig.PUBLIC_APP_NAME}</span
+		>
 	</a>
 	<a
 		href={`${base}/`}
 		onclick={handleNewChatClick}
-		class="flex rounded-lg border bg-white px-2 py-0.5 text-center shadow-sm hover:shadow-none dark:border-gray-600 dark:bg-gray-700 sm:text-smd"
+		class="group/nc relative flex h-9 items-center justify-center gap-1.5 overflow-hidden rounded-xl bg-primary px-3 text-sm font-medium text-primary-foreground shadow-glow-pink transition-all hover:translate-y-[-1px] hover:brightness-105 active:translate-y-0"
 		title="Ctrl/Cmd + Shift + O"
 	>
-		New Chat
+		<span
+			class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover/nc:translate-x-full"
+		></span>
+		<span class="relative">New Chat</span>
+		<kbd
+			class="relative ml-auto hidden rounded-md bg-white/15 px-1.5 py-px text-[10px] font-mono tracking-wide text-primary-foreground/90 sm:inline-flex"
+			>⌘⇧O</kbd
+		>
 	</a>
 </div>
 
 <div
-	class="scrollbar-custom flex touch-pan-y flex-col gap-1 overflow-y-auto rounded-r-xl border border-l-0 border-gray-100 from-gray-50 px-3 pb-3 pt-2 text-[.9rem] dark:border-transparent dark:from-gray-800/30 max-sm:bg-gradient-to-t md:bg-gradient-to-l"
+	class="scrollbar-custom flex touch-pan-y flex-col gap-1 overflow-y-auto bg-sidebar/40 px-3 pb-3 pt-1 text-[.9rem]"
 >
 	<div class="flex flex-col gap-0.5">
 		{#each Object.entries(groupedConversations) as [group, convs]}
 			{#if convs.length}
-				<h4 class="mb-1.5 mt-4 pl-0.5 text-sm text-gray-400 first:mt-0 dark:text-gray-500">
+				<h4
+					class="mb-1.5 mt-5 flex items-center gap-2 pl-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/75 first:mt-1"
+				>
+					<span class="h-px flex-1 bg-gradient-to-r from-primary/30 to-transparent"></span>
 					{titles[group]}
+					<span class="h-px flex-[3] bg-gradient-to-l from-primary/30 to-transparent"></span>
 				</h4>
 				{#each convs as conv}
 					<NavConversationItem {conv} {oneditConversationTitle} {ondeleteConversation} />
@@ -204,33 +217,31 @@
 	{/if}
 </div>
 
-<div
-	class="rounded-r-xl border border-l-0 border-gray-100 px-3 py-3 dark:border-transparent md:mt-3 md:bg-gradient-to-l md:from-gray-50 md:dark:from-gray-800/30"
->
+<div class="px-3 py-3">
 	{#if user}
 		<div
-			class="rounded-2xl border border-gray-200/80 bg-white/70 p-3 shadow-sm backdrop-blur-sm dark:border-gray-700 dark:bg-gray-800/70"
+			class="rounded-2xl border border-sidebar-border/70 bg-card/70 p-3 shadow-[0_1px_0_oklch(var(--primary)/0.08)] backdrop-blur-sm"
 		>
 			<div class="flex items-center gap-3">
 				{#if userAvatar}
 					<img
 						src={userAvatar}
-						class="size-10 rounded-full border border-gray-200 object-cover dark:border-gray-600"
+						class="size-10 rounded-full object-cover ring-2 ring-primary/30 ring-offset-2 ring-offset-card"
 						alt={userLabel}
 					/>
 				{:else}
 					<div
-						class="flex size-10 items-center justify-center rounded-full bg-gray-900 text-sm font-semibold text-white dark:bg-gray-100 dark:text-gray-900"
+						class="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-primary to-chart-5 text-sm font-semibold text-primary-foreground shadow-glow-pink"
 					>
 						{userLabel.slice(0, 1).toUpperCase()}
 					</div>
 				{/if}
 				<div class="min-w-0 flex-1">
-					<div class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+					<div class="truncate text-sm font-medium text-card-foreground">
 						{userLabel}
 					</div>
 					{#if userSecondaryLabel}
-						<div class="truncate text-xs text-gray-500 dark:text-gray-400">
+						<div class="truncate text-xs text-muted-foreground">
 							{userSecondaryLabel}
 						</div>
 					{/if}
@@ -240,14 +251,14 @@
 						href="https://huggingface.co/subscribe/pro?from=HuggingChat"
 						target="_blank"
 						rel="noopener noreferrer"
-						class="flex h-[20px] items-center gap-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+						class="flex h-[20px] items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary"
 					>
 						<IconPro />
 						Get PRO
 					</a>
 				{:else if publicConfig.isHuggingChat && $isPro === true}
 					<span
-						class="flex h-[20px] items-center gap-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+						class="flex h-[20px] items-center gap-1 rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-semibold text-primary"
 					>
 						<IconPro />
 						PRO
@@ -258,14 +269,14 @@
 			<div class="mt-3 flex items-center gap-2">
 				<a
 					href="{base}/settings/application"
-					class="flex h-9 flex-1 items-center justify-center rounded-xl bg-gray-100 px-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+					class="flex h-9 flex-1 items-center justify-center rounded-xl bg-secondary/80 px-3 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
 					onclick={handleNavItemClick}
 				>
 					Account
 				</a>
 				<a
 					href="{base}/logout"
-					class="flex h-9 items-center justify-center rounded-xl border border-gray-200 px-3 text-sm text-gray-600 transition-colors hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+					class="flex h-9 items-center justify-center rounded-xl border border-sidebar-border px-3 text-sm text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-secondary-foreground"
 				>
 					Log out
 				</a>
@@ -273,15 +284,15 @@
 		</div>
 	{:else if page.data.loginEnabled}
 		<div
-			class="rounded-2xl border border-dashed border-gray-300 bg-white/40 p-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-800/40 dark:text-gray-300"
+			class="rounded-2xl border border-dashed border-primary/40 bg-primary/[0.06] p-3 text-sm text-muted-foreground"
 		>
-			<div class="font-medium text-gray-900 dark:text-gray-100">Sign in to sync your chats</div>
-			<div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-				Access your conversations and settings across devices.
+			<div class="font-medium text-card-foreground">Save your chats</div>
+			<div class="mt-1 text-xs text-muted-foreground">
+				Create a free account to keep your conversations across devices.
 			</div>
 			<a
 				href="{base}/login?next={encodeURIComponent(page.url.pathname + page.url.search)}"
-				class="mt-3 flex h-9 items-center justify-center rounded-xl bg-gray-900 px-3 text-sm font-medium text-white transition-colors hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white"
+				class="mt-3 flex h-9 items-center justify-center rounded-xl bg-primary px-3 text-sm font-medium text-primary-foreground shadow-glow-pink transition-all hover:translate-y-[-1px] hover:brightness-105"
 			>
 				Continue
 			</a>
@@ -289,17 +300,15 @@
 	{/if}
 </div>
 
-<div
-	class="flex touch-none flex-col gap-1 rounded-r-xl border border-l-0 border-gray-100 p-3 text-sm dark:border-transparent md:mt-3 md:bg-gradient-to-l md:from-gray-50 md:dark:from-gray-800/30"
->
+<div class="flex touch-none flex-col gap-0.5 px-3 pb-3 text-sm">
 	<a
 		href="{base}/models"
-		class="flex h-9 flex-none items-center gap-1.5 rounded-lg pl-2 pr-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 sm:h-[2.08rem]"
+		class="flex h-9 flex-none items-center gap-1.5 rounded-xl px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:h-[2.08rem]"
 		onclick={handleNavItemClick}
 	>
 		Models
 		<span
-			class="ml-auto rounded-md bg-gray-500/5 px-1.5 py-0.5 text-xs text-gray-400 dark:bg-gray-500/20 dark:text-gray-400"
+			class="ml-auto rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-semibold text-primary"
 			>{nModels}</span
 		>
 	</a>
@@ -307,12 +316,12 @@
 	{#if user?.username || user?.email}
 		<button
 			onclick={() => (showMcpModal = true)}
-			class="flex h-9 flex-none items-center gap-1.5 rounded-lg pl-2 pr-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700 sm:h-[2.08rem]"
+			class="flex h-9 flex-none items-center gap-1.5 rounded-xl px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:h-[2.08rem]"
 		>
 			MCP Servers
 			{#if $enabledServersCount > 0}
 				<span
-					class="ml-auto rounded-md bg-blue-600/10 px-1.5 py-0.5 text-xs text-blue-600 dark:bg-blue-600/20 dark:text-blue-400"
+					class="ml-auto rounded-md bg-primary/15 px-1.5 py-0.5 text-xs font-semibold text-primary"
 				>
 					{$enabledServersCount}
 				</span>
@@ -321,7 +330,7 @@
 		<button
 			onclick={handleOpenWorkspace}
 			disabled={isSpawningWorkspace}
-			class="flex h-9 flex-none items-center gap-1.5 rounded-lg pl-2 pr-2 text-gray-500 hover:bg-gray-100 disabled:cursor-wait disabled:opacity-60 dark:text-gray-400 dark:hover:bg-gray-700 sm:h-[2.08rem]"
+			class="flex h-9 flex-none items-center gap-1.5 rounded-xl px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-wait disabled:opacity-60 sm:h-[2.08rem]"
 		>
 			Open Workspace
 			{#if isSpawningWorkspace}
@@ -329,14 +338,14 @@
 			{/if}
 		</button>
 		{#if workspaceError}
-			<span class="px-2 pb-1 text-xs text-red-500" role="alert">{workspaceError}</span>
+			<span class="px-2 pb-1 text-xs text-destructive" role="alert">{workspaceError}</span>
 		{/if}
 	{/if}
 
-	<span class="flex gap-1">
+	<span class="mt-1 flex gap-1">
 		<a
 			href="{base}/settings/application"
-			class="flex h-9 flex-none flex-grow items-center gap-1.5 rounded-lg pl-2 pr-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+			class="flex h-9 flex-none flex-grow items-center gap-1.5 rounded-xl px-2 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
 			onclick={handleNavItemClick}
 		>
 			Settings
@@ -346,7 +355,7 @@
 				switchTheme();
 			}}
 			aria-label="Toggle theme"
-			class="flex size-9 min-w-[1.5em] flex-none items-center justify-center rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+			class="flex size-9 min-w-[1.5em] flex-none items-center justify-center rounded-xl p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-primary"
 		>
 			{#if browser}
 				{#if isDark}

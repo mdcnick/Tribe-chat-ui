@@ -26,7 +26,7 @@ import type { TextGenerationContext } from "$lib/server/textGeneration/types";
 import { logger } from "$lib/server/logger.js";
 import { AbortRegistry } from "$lib/server/abortRegistry";
 import { MetricsServer } from "$lib/server/metrics";
-
+import { isAbortError } from "$lib/server/mcp/abort";
 export async function POST({ request, locals, params, getClientAddress }) {
 	const id = z.string().parse(params.id);
 	const convId = new ObjectId(id);
@@ -604,11 +604,8 @@ export async function POST({ request, locals, params, getClientAddress }) {
 				}
 			} catch (e) {
 				const err = e as Error;
-				const isAbortError =
-					err?.name === "AbortError" ||
-					err?.name === "APIUserAbortError" ||
-					err?.message === "Request was aborted.";
-				if (isAbortError || ctrl.signal.aborted) {
+				const aborted = isAbortError(err) || ctrl.signal.aborted;
+				if (aborted) {
 					abortedByUser = true;
 					logger.info({ conversationId: conversationKey }, "Generation aborted by user");
 					if (!finalAnswerReceived) {

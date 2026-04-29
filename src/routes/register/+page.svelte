@@ -8,32 +8,36 @@
 	let loading = $state(false);
 
 	const containerClass =
-		"min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-50 p-4 dark:from-gray-900 dark:to-gray-950";
+		"min-h-screen flex items-center justify-center bg-background p-4";
 	const cardClass =
-		"w-full max-w-sm rounded-2xl border border-gray-200/80 bg-white/85 p-8 shadow-2xl backdrop-blur dark:border-gray-700/80 dark:bg-gray-800/85";
-	const labelClass = "mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300";
+		"w-full max-w-sm rounded-2xl border border-border bg-card/85 p-8 text-card-foreground shadow-2xl backdrop-blur";
+	const labelClass = "mb-1.5 block text-sm font-medium text-foreground";
 	const inputClass =
-		"w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-[15px] text-gray-800 outline-none placeholder:text-gray-400 focus:ring-2 focus:ring-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:focus:ring-gray-700";
+		"w-full rounded-xl border border-input bg-background px-3 py-2 text-[15px] text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
 	const primaryBtnClass =
-		"inline-flex w-full items-center justify-center rounded-xl border border-gray-900 bg-gray-900 px-3 py-2.5 text-sm font-semibold text-white hover:bg-black disabled:opacity-50 dark:border-gray-100 dark:bg-gray-100 dark:text-gray-900 dark:hover:bg-white";
+		"inline-flex w-full items-center justify-center rounded-xl bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50";
 </script>
 
 <div class={containerClass}>
 	<div class={cardClass}>
-		<h1 class="mb-6 text-center text-xl font-semibold text-gray-900 dark:text-gray-100">
+		<h1 class="mb-6 text-center text-xl font-semibold text-foreground">
 			Create your account
 		</h1>
 
+		<p class="mb-6 text-center text-sm text-muted-foreground">
+			No email required. Pick a PIN and you're in.
+		</p>
+
 		{#if form?.error}
 			<div
-				class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800/50 dark:bg-red-900/20 dark:text-red-400"
+				class="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
 			>
 				{form.error}
 			</div>
 		{/if}
 
 		{#if !data.loginEnabled}
-			<p class="text-center text-sm text-gray-500 dark:text-gray-400">
+			<p class="text-center text-sm text-muted-foreground">
 				Registration is not configured.
 			</p>
 		{:else}
@@ -47,22 +51,63 @@
 					};
 				}}
 			>
+				<input type="hidden" name="next" value={data.next} />
+
 				<div class="mb-4">
-					<label class={labelClass} for="name">Name</label>
+					<label class={labelClass} for="username">
+						Username
+						<span class="text-muted-foreground/70">(leave blank for a random one)</span>
+					</label>
 					<input
-						id="name"
+						id="username"
 						class={inputClass}
 						type="text"
-						name="name"
-						autocomplete="name"
-						placeholder="Your name"
-						value={form?.name ?? ""}
+						name="username"
+						autocomplete="username"
+						placeholder="bold_fox_42"
+						value={form?.username ?? ""}
+					/>
+				</div>
+
+				<div class="mb-4">
+					<label class={labelClass} for="pin">PIN</label>
+					<input
+						id="pin"
+						class={inputClass}
+						type="password"
+						name="pin"
+						autocomplete="new-password"
+						inputmode="numeric"
+						pattern="[0-9]*"
+					maxlength="10"
+					minlength="10"
+					placeholder="10 digits"
 						required
 					/>
 				</div>
 
 				<div class="mb-4">
-					<label class={labelClass} for="email">Email</label>
+					<label class={labelClass} for="confirmPin">Confirm PIN</label>
+					<input
+						id="confirmPin"
+						class={inputClass}
+						type="password"
+						name="confirmPin"
+						autocomplete="new-password"
+						inputmode="numeric"
+						pattern="[0-9]*"
+					maxlength="10"
+					minlength="10"
+					placeholder="Re-enter 10-digit PIN"
+						required
+					/>
+				</div>
+
+				<div class="mb-5">
+					<label class={labelClass} for="email">
+						Email
+						<span class="text-muted-foreground/70">(optional)</span>
+					</label>
 					<input
 						id="email"
 						class={inputClass}
@@ -71,39 +116,24 @@
 						autocomplete="email"
 						placeholder="you@example.com"
 						value={form?.email ?? ""}
-						required
 					/>
 				</div>
 
-				<div class="mb-4">
-					<label class={labelClass} for="password">Password</label>
-					<input
-						id="password"
-						class={inputClass}
-						type="password"
-						name="password"
-						autocomplete="new-password"
-						placeholder="••••••••"
-						minlength="8"
-						required
-					/>
-					<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Min. 8 characters</p>
-				</div>
-
-				<button class="{primaryBtnClass} mt-2" type="submit" disabled={loading}>
+				<button class={primaryBtnClass} type="submit" disabled={loading}>
 					{#if loading}
-						<span class="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent dark:border-gray-900 dark:border-t-transparent"
+						<span
+							class="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent dark:border-gray-900 dark:border-t-transparent"
 						></span>
 					{/if}
 					Create Account
 				</button>
 			</form>
 
-			<p class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+			<p class="mt-6 text-center text-sm text-muted-foreground">
 				Already have an account?
 				<a
 					href="{base}/login"
-					class="font-medium text-gray-900 hover:underline dark:text-gray-100"
+					class="font-medium text-primary hover:underline"
 				>
 					Sign in →
 				</a>

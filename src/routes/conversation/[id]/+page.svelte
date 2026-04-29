@@ -673,7 +673,7 @@
 	{#if browserPanelState.debugUrl || browserPanelState.error}
 		<button
 			type="button"
-			class="relative z-10 w-1 flex-none cursor-col-resize bg-gray-200 p-0 transition-colors hover:bg-blue-400 dark:bg-gray-700 dark:hover:bg-blue-500"
+			class="relative z-10 w-1 flex-none cursor-col-resize bg-sidebar-border/60 p-0 transition-colors hover:bg-primary/60"
 			aria-label="Drag to resize panels"
 			onmousedown={startResize}
 		></button>

@@ -38,6 +38,7 @@
 		"flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm text-gray-600 transition-colors hover:bg-gray-50/80 dark:text-gray-300 dark:hover:bg-gray-700/30";
 
 	const authProviderLabels = {
+		"pin": "PIN",
 		"better-auth": "Email",
 		"legacy-oidc": "Legacy OIDC",
 		"trusted-header": "Trusted Header",
@@ -319,10 +320,10 @@
 								Account
 							</p>
 							<h2 class="mt-2 text-2xl font-semibold text-gray-900 dark:text-gray-100">
-								Sign in to sync your workspace
+								Create your account
 							</h2>
 							<p class="mt-3 max-w-2xl text-sm text-gray-600 dark:text-gray-300">
-								Signing in keeps your chats and application preferences available across browsers
+								Create a free account with just a PIN to keep your chats and settings across browsers
 								and devices.
 							</p>
 						</div>
@@ -333,7 +334,7 @@
 					>
 						<p class="min-h-10 text-sm text-gray-500 dark:text-gray-400">
 							{#if page.data.loginEnabled}
-								Use your configured sign-in provider to continue where you left off.
+								Use your PIN to sign in and continue where you left off.
 							{:else}
 								Sign-in is not enabled on this deployment, so settings remain local to this device.
 							{/if}

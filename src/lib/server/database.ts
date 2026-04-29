@@ -292,14 +292,18 @@ export class Database {
 		users
 			.createIndex({ sessionId: 1 }, { unique: true, sparse: true })
 			.catch((e) => logger.error(e, "Error creating index for users by sessionId"));
-		// No unicity because due to renames & outdated info from oauth provider, there may be the same username on different users
+		// Username is unique — every user has one (auto-generated or chosen)
 		users
-			.createIndex({ username: 1 })
+			.createIndex({ username: 1 }, { unique: true })
 			.catch((e) => logger.error(e, "Error creating index for users by username"));
 		// For stats queries filtering users by creation date
 		users
 			.createIndex({ createdAt: 1 })
 			.catch((e) => logger.error(e, "Error creating index for users by createdAt"));
+		// Recovery phrase lookup (sparse because not all auth methods use PIN recovery)
+		users
+			.createIndex({ recoveryPhraseHash: 1 }, { unique: true, sparse: true })
+			.catch((e) => logger.error(e, "Error creating index for users by recoveryPhraseHash"));
 		messageEvents
 			.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 1 })
 			.catch((e) => logger.error(e, "Error creating index for messageEvents by expiresAt"));

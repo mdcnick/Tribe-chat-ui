@@ -83,35 +83,22 @@ export async function handleRequest({ event, resolve }: HandleInput): Promise<Re
 			event.locals.sessionId = auth.sessionId;
 
 			if (loginEnabled && !auth.user && !event.url.pathname.startsWith(`${base}/.well-known/`)) {
-				if (config.AUTOMATIC_LOGIN === "true") {
-					// AUTOMATIC_LOGIN: always redirect to OAuth flow (unless already on login or healthcheck pages)
-					if (
-						!event.url.pathname.startsWith(`${base}/login`) &&
-						!event.url.pathname.startsWith(`${base}/healthcheck`)
-					) {
-						// To get the same CSRF token after callback
-						refreshSessionCookie(event.cookies, auth.secretSessionId);
-						return await triggerLoginFlow(event);
-					}
-				} else {
-					// Redirect to OAuth flow unless on the authorized pages (home, shared conversation, login, healthcheck, model thumbnails)
-					if (
-						event.url.pathname !== `${base}/` &&
-						event.url.pathname !== `${base}` &&
-						!event.url.pathname.startsWith(`${base}/login`) &&
-						!event.url.pathname.startsWith(`${base}/login/callback`) &&
-						!event.url.pathname.startsWith(`${base}/register`) &&
-						!event.url.pathname.startsWith(`${base}/forgot-password`) &&
-						!event.url.pathname.startsWith(`${base}/reset-password`) &&
-						!event.url.pathname.startsWith(`${base}/healthcheck`) &&
-						!event.url.pathname.startsWith(`${base}/r/`) &&
-						!event.url.pathname.startsWith(`${base}/conversation/`) &&
-						!event.url.pathname.startsWith(`${base}/models/`) &&
-						!event.url.pathname.startsWith(`${base}/api`)
-					) {
-						refreshSessionCookie(event.cookies, auth.secretSessionId);
-						return triggerLoginFlow(event);
-					}
+				// Redirect to login if not authenticated (unless on auth-related or public pages)
+				if (
+					event.url.pathname !== `${base}/` &&
+					event.url.pathname !== `${base}` &&
+					!event.url.pathname.startsWith(`${base}/login`) &&
+					!event.url.pathname.startsWith(`${base}/register`) &&
+					!event.url.pathname.startsWith(`${base}/recovery`) &&
+					!event.url.pathname.startsWith(`${base}/recovery-phrase`) &&
+					!event.url.pathname.startsWith(`${base}/healthcheck`) &&
+					!event.url.pathname.startsWith(`${base}/r/`) &&
+					!event.url.pathname.startsWith(`${base}/conversation/`) &&
+					!event.url.pathname.startsWith(`${base}/models/`) &&
+					!event.url.pathname.startsWith(`${base}/api`)
+				) {
+					refreshSessionCookie(event.cookies, auth.secretSessionId);
+					return triggerLoginFlow(event);
 				}
 			}
 
@@ -155,9 +142,10 @@ export async function handleRequest({ event, resolve }: HandleInput): Promise<Re
 			}
 
 			if (
-				event.request.method === "POST" ||
 				event.url.pathname.startsWith(`${base}/login`) ||
-				event.url.pathname.startsWith(`${base}/login/callback`)
+				event.url.pathname.startsWith(`${base}/register`) ||
+				event.url.pathname.startsWith(`${base}/recovery`) ||
+				event.url.pathname.startsWith(`${base}/recovery-phrase`)
 			) {
 				// if the request is a POST request or login-related we refresh the cookie
 				refreshSessionCookie(event.cookies, auth.secretSessionId);
@@ -173,11 +161,10 @@ export async function handleRequest({ event, resolve }: HandleInput): Promise<Re
 				!event.locals.user &&
 				!isStripeBillingWebhook &&
 				!isMcpHealth &&
-				!event.url.pathname.startsWith(`${base}/api/auth`) &&
 				!event.url.pathname.startsWith(`${base}/login`) &&
 				!event.url.pathname.startsWith(`${base}/register`) &&
-				!event.url.pathname.startsWith(`${base}/forgot-password`) &&
-				!event.url.pathname.startsWith(`${base}/reset-password`) &&
+				!event.url.pathname.startsWith(`${base}/recovery`) &&
+				!event.url.pathname.startsWith(`${base}/recovery-phrase`) &&
 				!event.url.pathname.startsWith(`${base}/admin`) &&
 				!event.url.pathname.startsWith(`${base}/settings`) &&
 				!["GET", "OPTIONS", "HEAD"].includes(event.request.method)
@@ -214,10 +201,7 @@ export async function handleRequest({ event, resolve }: HandleInput): Promise<Re
 				);
 			}
 
-			if (
-				event.url.pathname.startsWith(`${base}/login/callback`) ||
-				event.url.pathname.startsWith(`${base}/login`)
-			) {
+			if (event.url.pathname.startsWith(`${base}/login`)) {
 				response.headers.append("Cache-Control", "no-store");
 			}
 

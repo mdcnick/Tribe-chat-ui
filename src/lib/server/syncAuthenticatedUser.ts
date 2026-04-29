@@ -85,7 +85,7 @@ export async function syncAuthenticatedUser(params: {
 
 	const now = new Date();
 	const userPatch = {
-		username,
+		username: username || name || `user_${authSubject.slice(0, 8)}`,
 		name,
 		email,
 		avatarUrl,
@@ -98,11 +98,12 @@ export async function syncAuthenticatedUser(params: {
 		await collections.users.updateOne({ _id: user._id }, { $set: userPatch });
 		user = { ...user, ...userPatch };
 	} else {
+		const createdUsername = username || name || `user_${authSubject.slice(0, 8)}`;
 		const createdUser: User = {
 			_id: new ObjectId(),
 			createdAt: now,
 			updatedAt: now,
-			username,
+			username: createdUsername,
 			name,
 			email,
 			avatarUrl,
@@ -115,6 +116,7 @@ export async function syncAuthenticatedUser(params: {
 	}
 
 	const currentSession = await collections.sessions.findOne({ sessionId: currentSessionId });
+	if (!user) throw new Error("User not found after sync");
 	if (currentSession?.userId?.toString() === user._id.toString()) {
 		locals.user = user;
 		locals.sessionId = currentSessionId;

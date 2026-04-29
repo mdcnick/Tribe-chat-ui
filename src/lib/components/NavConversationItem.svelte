@@ -56,8 +56,10 @@
 	data-sveltekit-noscroll
 	data-sveltekit-preload-data="tap"
 	href="{base}/conversation/{conv.id}"
-	class="group flex h-[2.08rem] flex-none items-center gap-1.5 rounded-lg pl-2 pr-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700 max-sm:h-10
-		{conv.id === page.params.id ? 'bg-gray-100 dark:bg-gray-700' : ''}"
+	class="group relative flex h-[2.08rem] flex-none items-center gap-1.5 rounded-xl pl-3 pr-2 text-sidebar-foreground/85 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground max-sm:h-10
+		{conv.id === page.params.id
+			? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-[inset_2px_0_0_oklch(var(--sidebar-primary))]'
+			: ''}"
 	onclick={(e) => {
 		if (e.detail >= 2) {
 			e.preventDefault();
@@ -101,7 +103,7 @@
 				renameOpen = true;
 			}}
 		>
-			<CarbonEdit class="text-xs text-gray-400 hover:text-gray-500 dark:hover:text-gray-300" />
+			<CarbonEdit class="text-xs text-muted-foreground hover:text-primary" />
 		</button>
 
 		<button
@@ -118,7 +120,7 @@
 				}
 			}}
 		>
-			<CarbonTrashCan class="text-xs text-gray-400  hover:text-gray-500 dark:hover:text-gray-300" />
+			<CarbonTrashCan class="text-xs text-muted-foreground hover:text-destructive" />
 		</button>
 	{/if}
 </a>

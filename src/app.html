@@ -6,7 +6,13 @@
 			name="viewport"
 			content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
 		/>
-		<meta name="theme-color" content="rgb(249, 250, 251)" />
+<meta name="theme-color" content="#f9eaf2" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap"
+			rel="stylesheet"
+		/>
 		<script>
 			(function () {
 				try {
@@ -16,7 +22,7 @@
 					var isDark = stored === "dark" || (followSystem && prefersDark);
 					if (isDark) {
 						document.documentElement.classList.add("dark");
-						document.querySelector('meta[name="theme-color"]').setAttribute("content", "#07090d");
+document.querySelector('meta[name="theme-color"]').setAttribute("content", "#221d27");
 					}
 				} catch (e) {}
 			})();
@@ -26,7 +32,7 @@
 		</script>
 		%sveltekit.head%
 	</head>
-	<body data-sveltekit-preload-data="hover" class="h-dvh dark:bg-gray-900">
+<body data-sveltekit-preload-data="hover" class="h-dvh bg-background text-foreground">
 		<div id="app" class="contents h-full">%sveltekit.body%</div>
 
 		<!-- Google Tag Manager -->

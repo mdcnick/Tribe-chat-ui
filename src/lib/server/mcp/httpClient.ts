@@ -1,18 +1,17 @@
 import { Client } from "@modelcontextprotocol/sdk/client";
 import { getClient, evictFromPool } from "./clientPool";
 import { config } from "$lib/server/config";
+import { truncateToolResult } from "./toolResult";
 
 function isConnectionClosedError(err: unknown): boolean {
 	const message = err instanceof Error ? err.message : String(err);
 	return message.includes("-32000") || message.toLowerCase().includes("connection closed");
 }
-
 export interface McpServerConfig {
 	name: string;
 	url: string;
 	headers?: Record<string, string>;
 }
-
 const DEFAULT_TIMEOUT_MS = 120_000;
 
 export function getMcpToolTimeoutMs(): number {
@@ -118,5 +117,5 @@ export async function callMcpTool(
 	const contentBlocks = Array.isArray(response?.content)
 		? (response.content as unknown[])
 		: undefined;
-	return { text, structured, content: contentBlocks };
+	return { text: truncateToolResult(text), structured, content: contentBlocks };
 }

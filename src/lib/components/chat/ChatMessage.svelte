@@ -262,7 +262,7 @@
 			animating={isLast && loading}
 		/>
 		<div
-			class="relative flex min-w-[60px] flex-col gap-2 break-words rounded-2xl border border-gray-100 bg-gradient-to-br from-gray-50 px-5 py-3.5 text-gray-600 prose-pre:my-2 dark:border-gray-800 dark:from-gray-800/80 dark:text-gray-300"
+			class="relative flex min-w-[60px] flex-col gap-2 break-words rounded-2xl rounded-tl-md border border-sidebar-border/60 bg-card/70 px-5 py-3.5 text-card-foreground shadow-[0_1px_0_oklch(var(--primary)/0.06)] backdrop-blur-sm prose-pre:my-2"
 		>
 			{#if message.files?.length}
 				<div class="flex h-fit flex-wrap gap-x-5 gap-y-2">
@@ -319,7 +319,7 @@
 									/>
 								{:else if part && part.trim().length > 0}
 									<div
-										class="prose max-w-none dark:prose-invert prose-headings:font-semibold prose-h1:text-lg prose-h2:text-base prose-h3:text-base prose-pre:bg-gray-800 prose-img:my-0 prose-img:cursor-pointer prose-img:rounded-lg dark:prose-pre:bg-gray-900"
+										class="prose max-w-none dark:prose-invert prose-headings:font-display prose-headings:tracking-tight prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-foreground prose-code:rounded prose-code:bg-secondary/60 prose-code:px-1 prose-code:py-px prose-code:font-mono prose-code:text-[0.92em] prose-code:before:hidden prose-code:after:hidden prose-pre:bg-card prose-pre:text-card-foreground prose-pre:border prose-pre:border-sidebar-border/60 prose-img:my-0 prose-img:cursor-pointer prose-img:rounded-lg"
 									>
 										<MarkdownRenderer content={part} loading={isLast && loading} />
 									</div>
@@ -327,7 +327,7 @@
 							{/each}
 						{:else}
 							<div
-								class="prose max-w-none dark:prose-invert prose-headings:font-semibold prose-h1:text-lg prose-h2:text-base prose-h3:text-base prose-pre:bg-gray-800 prose-img:my-0 prose-img:cursor-pointer prose-img:rounded-lg dark:prose-pre:bg-gray-900"
+								class="prose max-w-none dark:prose-invert prose-headings:font-display prose-headings:tracking-tight prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-foreground prose-code:rounded prose-code:bg-secondary/60 prose-code:px-1 prose-code:py-px prose-code:font-mono prose-code:text-[0.92em] prose-code:before:hidden prose-code:after:hidden prose-pre:bg-card prose-pre:text-card-foreground prose-pre:border prose-pre:border-sidebar-border/60 prose-img:my-0 prose-img:cursor-pointer prose-img:rounded-lg"
 							>
 								<MarkdownRenderer content={block.content} loading={isLast && loading} />
 							</div>
@@ -442,10 +442,10 @@
 				</div>
 			{/if}
 
-			<div class="flex w-full flex-row flex-nowrap">
+			<div class="flex w-full flex-row flex-nowrap justify-end">
 				{#if !editMode}
 					<p
-						class="disabled w-full appearance-none whitespace-break-spaces text-wrap break-words bg-inherit px-5 py-3.5 text-gray-500 dark:text-gray-400"
+						class="disabled max-w-[85%] appearance-none whitespace-break-spaces text-wrap break-words rounded-2xl rounded-tr-md border border-primary/20 bg-primary/[0.12] px-5 py-3.5 text-foreground shadow-[0_1px_0_oklch(var(--primary)/0.08)] dark:bg-primary/[0.18]"
 					>
 						{message.content.trim()}
 					</p>
@@ -460,7 +460,7 @@
 						}}
 					>
 						<textarea
-							class="w-full whitespace-break-spaces break-words rounded-xl bg-gray-100 px-5 py-3.5 text-gray-500 *:h-max focus:outline-none dark:bg-gray-800 dark:text-gray-400"
+							class="w-full whitespace-break-spaces break-words rounded-2xl border border-primary/30 bg-primary/[0.08] px-5 py-3.5 text-foreground *:h-max focus:outline-none focus:ring-2 focus:ring-primary/40 dark:bg-primary/[0.14]"
 							rows="5"
 							bind:this={editContentEl}
 							value={message.content.trim()}
@@ -472,8 +472,8 @@
 								type="submit"
 								class="btn rounded-lg px-3 py-1.5 text-sm
                                 {loading
-									? 'bg-gray-300 text-gray-400 dark:bg-gray-700 dark:text-gray-600'
-									: 'bg-gray-200 text-gray-600 hover:text-gray-800   focus:ring-0 dark:bg-gray-800 dark:text-gray-300 dark:hover:text-gray-200'}
+									? 'bg-secondary/50 text-muted-foreground'
+									: 'bg-primary text-primary-foreground shadow-glow-pink hover:brightness-105 focus:ring-0'}
 								"
 								disabled={loading}
 							>
@@ -481,7 +481,7 @@
 							</button>
 							<button
 								type="button"
-								class="btn rounded-sm p-2 text-sm text-gray-400 hover:text-gray-500 focus:ring-0 dark:text-gray-400 dark:hover:text-gray-300"
+								class="btn rounded-sm p-2 text-sm text-muted-foreground hover:text-foreground focus:ring-0"
 								onclick={() => {
 									editMsdgId = null;
 								}}
@@ -503,7 +503,7 @@
 				{/if}
 				{#if (alternatives.length > 1 && editMsdgId === null) || (!loading && !editMode)}
 					<button
-						class="hidden cursor-pointer items-center gap-1 rounded-md border border-gray-200 px-1.5 py-0.5 text-xs text-gray-400 group-hover:flex hover:flex hover:text-gray-500 dark:border-gray-700 dark:text-gray-400 dark:hover:text-gray-300 lg:-right-2"
+						class="hidden cursor-pointer items-center gap-1 rounded-md border border-sidebar-border bg-card/60 px-1.5 py-0.5 text-xs text-muted-foreground group-hover:flex hover:flex hover:text-primary lg:-right-2"
 						title="Edit"
 						type="button"
 						onclick={() => {
@@ -515,9 +515,9 @@
 						Edit
 					</button>
 					<button
-						class="hidden cursor-pointer items-center gap-1 rounded-md border border-gray-200 px-1.5 py-0.5 text-xs group-hover:flex hover:flex lg:-right-2 {isUserMsgCopied
-							? 'text-green-500 dark:text-green-400'
-							: 'text-gray-400 hover:text-gray-500 dark:text-gray-400 dark:hover:text-gray-300'} dark:border-gray-700"
+						class="hidden cursor-pointer items-center gap-1 rounded-md border border-sidebar-border bg-card/60 px-1.5 py-0.5 text-xs group-hover:flex hover:flex lg:-right-2 {isUserMsgCopied
+							? 'text-primary'
+							: 'text-muted-foreground hover:text-primary'}"
 						title="Copy to clipboard"
 						type="button"
 						onclick={async () => {

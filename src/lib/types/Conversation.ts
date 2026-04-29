@@ -24,4 +24,8 @@ export interface Conversation extends Timestamps {
 	assistantId?: Assistant["_id"];
 
 	userAgent?: string;
+
+	// Encrypted messages blob — replaces `messages` when conversations are encrypted at rest.
+	// When present, `messages` is an empty array and the actual content is stored here.
+	_em?: string;
 }

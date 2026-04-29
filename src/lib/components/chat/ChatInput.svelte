@@ -254,7 +254,7 @@
 	{#if !showNoTools}
 		<div
 			class={[
-				"scrollbar-custom -ml-0.5 flex max-w-[calc(100%-40px)] flex-wrap items-center justify-start gap-2.5 px-3 pb-2.5 pt-1.5 text-gray-500 dark:text-gray-400 max-md:flex-nowrap max-md:overflow-x-auto sm:gap-2",
+				"scrollbar-custom -ml-0.5 flex max-w-[calc(100%-40px)] flex-wrap items-center justify-start gap-2.5 px-3 pb-2.5 pt-1.5 text-muted-foreground max-md:flex-nowrap max-md:overflow-x-auto sm:gap-2",
 			]}
 		>
 			{#if showFileUpload}
@@ -286,7 +286,7 @@
 						}}
 					>
 						<DropdownMenu.Trigger
-							class="btn size-8 rounded-full border bg-white text-black shadow transition-none enabled:hover:bg-white enabled:hover:shadow-inner dark:border-transparent dark:bg-gray-600/50 dark:text-white dark:hover:enabled:bg-gray-600 sm:size-7"
+							class="btn size-8 rounded-full border border-sidebar-border/70 bg-card/70 text-card-foreground transition-colors enabled:hover:border-primary/40 enabled:hover:bg-accent enabled:hover:text-primary sm:size-7"
 							disabled={loading}
 							aria-label="Add attachment"
 						>
@@ -294,7 +294,7 @@
 						</DropdownMenu.Trigger>
 						<DropdownMenu.Portal>
 							<DropdownMenu.Content
-								class="z-50 rounded-xl border border-gray-200 bg-white/95 p-1 text-gray-800 shadow-lg backdrop-blur dark:border-gray-700/60 dark:bg-gray-800/95 dark:text-gray-100"
+								class="z-50 rounded-xl border border-sidebar-border bg-popover/95 p-1 text-popover-foreground shadow-glow-pink backdrop-blur"
 								side="top"
 								sideOffset={8}
 								align="start"
@@ -304,7 +304,7 @@
 							>
 								{#if modelIsMultimodal}
 									<DropdownMenu.Item
-										class="flex h-9 select-none items-center gap-1 rounded-md px-2 text-sm text-gray-700 data-[highlighted]:bg-gray-100 focus-visible:outline-none dark:text-gray-200 dark:data-[highlighted]:bg-white/10 sm:h-8"
+										class="flex h-9 select-none items-center gap-1 rounded-md px-2 text-sm text-popover-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground focus-visible:outline-none sm:h-8"
 										onSelect={() => openFilePickerImage()}
 									>
 										<CarbonImage class="size-4 opacity-90 dark:opacity-80" />
@@ -314,7 +314,7 @@
 
 								<DropdownMenu.Sub>
 									<DropdownMenu.SubTrigger
-										class="flex h-9 select-none items-center gap-1 rounded-md px-2 text-sm text-gray-700 data-[highlighted]:bg-gray-100 data-[state=open]:bg-gray-100 focus-visible:outline-none dark:text-gray-200 dark:data-[highlighted]:bg-white/10 dark:data-[state=open]:bg-white/10 sm:h-8"
+										class="flex h-9 select-none items-center gap-1 rounded-md px-2 text-sm text-gray-700 data-[highlighted]:bg-gray-100 data-[state=open]:bg-accent data-[state=open]:text-accent-foreground focus-visible:outline-none sm:h-8"
 									>
 										<div class="flex items-center gap-1">
 											<CarbonDocument class="size-4 opacity-90 dark:opacity-80" />
@@ -325,21 +325,21 @@
 										</div>
 									</DropdownMenu.SubTrigger>
 									<DropdownMenu.SubContent
-										class="z-50 rounded-xl border border-gray-200 bg-white/95 p-1 text-gray-800 shadow-lg backdrop-blur dark:border-gray-700/60 dark:bg-gray-800/95 dark:text-gray-100"
+										class="z-50 rounded-xl border border-sidebar-border bg-popover/95 p-1 text-popover-foreground shadow-glow-pink backdrop-blur"
 										sideOffset={10}
 										trapFocus={false}
 										onCloseAutoFocus={(e) => e.preventDefault()}
 										interactOutsideBehavior="defer-otherwise-close"
 									>
 										<DropdownMenu.Item
-											class="flex h-9 select-none items-center gap-1 rounded-md px-2 text-sm text-gray-700 data-[highlighted]:bg-gray-100 focus-visible:outline-none dark:text-gray-200 dark:data-[highlighted]:bg-white/10 sm:h-8"
+											class="flex h-9 select-none items-center gap-1 rounded-md px-2 text-sm text-popover-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground focus-visible:outline-none sm:h-8"
 											onSelect={() => openFilePickerText()}
 										>
 											<CarbonUpload class="size-4 opacity-90 dark:opacity-80" />
 											Upload from device
 										</DropdownMenu.Item>
 										<DropdownMenu.Item
-											class="flex h-9 select-none items-center gap-1 rounded-md px-2 text-sm text-gray-700 data-[highlighted]:bg-gray-100 focus-visible:outline-none dark:text-gray-200 dark:data-[highlighted]:bg-white/10 sm:h-8"
+											class="flex h-9 select-none items-center gap-1 rounded-md px-2 text-sm text-popover-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground focus-visible:outline-none sm:h-8"
 											onSelect={() => (isUrlModalOpen = true)}
 										>
 											<CarbonLink class="size-4 opacity-90 dark:opacity-80" />
@@ -351,7 +351,7 @@
 								<!-- MCP Servers submenu -->
 								<DropdownMenu.Sub>
 									<DropdownMenu.SubTrigger
-										class="flex h-9 select-none items-center gap-1 rounded-md px-2 text-sm text-gray-700 data-[highlighted]:bg-gray-100 data-[state=open]:bg-gray-100 focus-visible:outline-none dark:text-gray-200 dark:data-[highlighted]:bg-white/10 dark:data-[state=open]:bg-white/10 sm:h-8"
+										class="flex h-9 select-none items-center gap-1 rounded-md px-2 text-sm text-gray-700 data-[highlighted]:bg-gray-100 data-[state=open]:bg-accent data-[state=open]:text-accent-foreground focus-visible:outline-none sm:h-8"
 									>
 										<div class="flex items-center gap-1">
 											<IconMCP classNames="size-4 opacity-90 dark:opacity-80" />
@@ -362,7 +362,7 @@
 										</div>
 									</DropdownMenu.SubTrigger>
 									<DropdownMenu.SubContent
-										class="z-50 rounded-xl border border-gray-200 bg-white/95 p-1 text-gray-800 shadow-lg backdrop-blur dark:border-gray-700/60 dark:bg-gray-800/95 dark:text-gray-100"
+										class="z-50 rounded-xl border border-sidebar-border bg-popover/95 p-1 text-popover-foreground shadow-glow-pink backdrop-blur"
 										sideOffset={10}
 										trapFocus={false}
 										onCloseAutoFocus={(e) => e.preventDefault()}
@@ -373,7 +373,7 @@
 												checked={$selectedServerIds.has(server.id)}
 												onCheckedChange={() => toggleServer(server.id)}
 												closeOnSelect={false}
-												class="flex h-9 select-none items-center gap-2 rounded-md px-2 text-sm leading-none text-gray-800 data-[highlighted]:bg-gray-100 focus-visible:outline-none dark:text-gray-100 dark:data-[highlighted]:bg-white/10"
+												class="flex h-9 select-none items-center gap-2 rounded-md px-2 text-sm leading-none text-popover-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground focus-visible:outline-none"
 											>
 												{#snippet children({ checked })}
 													<img
@@ -387,7 +387,7 @@
 														<span
 															class={[
 																"relative mt-px flex h-4 w-7 items-center self-center rounded-full transition-colors",
-																checked ? "bg-blue-600/80" : "bg-gray-300 dark:bg-gray-700",
+																checked ? "bg-primary" : "bg-secondary",
 															]}
 														>
 															<span
@@ -403,10 +403,10 @@
 										{/each}
 
 										{#if $allMcpServers.length > 0}
-											<DropdownMenu.Separator class="my-1 h-px bg-gray-200 dark:bg-gray-700/60" />
+											<DropdownMenu.Separator class="my-1 h-px bg-sidebar-border/70" />
 										{/if}
 										<DropdownMenu.Item
-											class="flex h-9 select-none items-center gap-1 rounded-md px-2 text-sm text-gray-700 data-[highlighted]:bg-gray-100 focus-visible:outline-none dark:text-gray-200 dark:data-[highlighted]:bg-white/10 sm:h-8"
+											class="flex h-9 select-none items-center gap-1 rounded-md px-2 text-sm text-popover-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground focus-visible:outline-none sm:h-8"
 											onSelect={() => (isMcpManagerOpen = true)}
 										>
 											Manage MCP Servers
@@ -421,7 +421,7 @@
 
 					{#if $enabledServersCount > 0}
 						<div
-							class="ml-1.5 inline-flex h-8 items-center gap-1.5 rounded-full border border-blue-500/10 bg-blue-600/10 pl-2 pr-1 text-xs font-semibold text-blue-700 dark:bg-blue-600/20 dark:text-blue-400 sm:h-7"
+							class="ml-1.5 inline-flex h-8 items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 pl-2 pr-1 text-xs font-semibold text-primary sm:h-7"
 							class:grayscale={!modelSupportsTools}
 							class:opacity-60={!modelSupportsTools}
 							class:cursor-help={!modelSupportsTools}
@@ -442,11 +442,11 @@
 											<img
 												src={getMcpServerFaviconUrl(server.url)}
 												alt=""
-												class="size-4 rounded bg-white p-px shadow-sm ring-1 ring-black/5 dark:bg-gray-900 dark:ring-white/10"
+												class="size-4 rounded bg-card p-px shadow-sm ring-1 ring-sidebar-border/70"
 											/>
 										{/each}
 										{#if selectedServers.length > 3}
-											<span class="ml-1 text-[10px] font-semibold text-blue-800 dark:text-blue-200">
+											<span class="ml-1 text-[10px] font-semibold text-primary">
 												+{selectedServers.length - 3}
 											</span>
 										{/if}
@@ -455,7 +455,7 @@
 								MCP ({$enabledServersCount})
 							</button>
 							<button
-								class="grid size-5 place-items-center rounded-full bg-blue-600/15 text-blue-700 transition-colors hover:bg-blue-600/25 dark:bg-blue-600/25 dark:text-blue-300 dark:hover:bg-blue-600/35"
+								class="grid size-5 place-items-center rounded-full bg-primary/15 text-primary transition-colors hover:bg-primary/25"
 								aria-label="Disable all MCP servers"
 								onclick={() => disableAllServers()}
 								type="button"

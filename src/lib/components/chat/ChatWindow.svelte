@@ -610,10 +610,9 @@
 
 	<div
 		class="pointer-events-none absolute inset-x-0 bottom-0 z-0 mx-auto flex w-full
-			max-w-3xl flex-col items-center justify-center bg-gradient-to-t from-white
-			via-white/100 to-white/0 px-3.5 pt-2 dark:border-gray-800
-			dark:from-gray-900 dark:via-gray-900/100
-			dark:to-gray-900/0 max-sm:py-0 sm:px-5 md:pb-4 xl:max-w-4xl [&>*]:pointer-events-auto"
+			max-w-3xl flex-col items-center justify-center bg-gradient-to-t from-background
+			via-background/95 to-background/0 px-3.5 pt-2
+			max-sm:py-0 sm:px-5 md:pb-4 xl:max-w-4xl [&>*]:pointer-events-auto"
 	>
 		{#if !draft.length && !messages.length && !sources.length && !loading && (currentModel.isRouter || (modelSupportsTools && $allBaseServersEnabled)) && activeExamples.length && !hideRouterExamples && !lastIsError && $mcpServersLoaded}
 			<div
@@ -621,7 +620,7 @@
 			>
 				{#each activeExamples as ex}
 					<button
-						class="flex items-center rounded-lg bg-gray-100/90 px-2 py-0.5 text-center text-sm backdrop-blur hover:text-gray-500 dark:bg-gray-700/50 dark:hover:text-gray-400"
+						class="flex items-center rounded-full border border-sidebar-border/70 bg-card/70 px-3 py-1 text-center text-sm text-card-foreground/85 backdrop-blur transition-all hover:-translate-y-px hover:border-primary/50 hover:bg-accent hover:text-foreground"
 						onclick={() => startExample(ex)}>{ex.title}</button
 					>
 				{/each}
@@ -634,7 +633,7 @@
 				<!-- <span class=" text-gray-500 dark:text-gray-400">Follow ups</span> -->
 				{#each routerFollowUps as followUp}
 					<button
-						class="flex items-center gap-1 rounded-lg bg-gray-100/90 px-2 py-0.5 text-center text-sm backdrop-blur hover:text-gray-500 dark:bg-gray-700/50 dark:hover:text-gray-400"
+						class="flex items-center gap-1 rounded-full border border-sidebar-border/70 bg-card/70 px-3 py-1 text-center text-sm text-card-foreground/85 backdrop-blur transition-all hover:-translate-y-px hover:border-primary/50 hover:bg-accent hover:text-foreground"
 						onclick={() => startFollowUp(followUp)}
 					>
 						<CarbonDirectionRight class="scale-y-[-1] text-xs" />
@@ -684,7 +683,7 @@
 					handleSubmit();
 				}}
 				class={{
-					"relative flex w-full max-w-4xl flex-1 items-center rounded-xl border bg-gray-100 dark:border-gray-700 dark:bg-gray-800": true,
+					"relative flex w-full max-w-4xl flex-1 items-center rounded-2xl border border-sidebar-border/80 bg-card/80 shadow-[0_8px_30px_-12px_oklch(var(--primary)/0.25)] backdrop-blur-xl transition-shadow focus-within:border-primary/50 focus-within:shadow-[0_8px_30px_-12px_oklch(var(--primary)/0.45)]": true,
 					"opacity-30": isReadOnly,
 					"max-sm:mb-4": focused && isVirtualKeyboard(),
 				}}
@@ -725,7 +724,7 @@
 							>
 								<div
 									class={{
-										"flex min-w-0 items-center gap-2 text-xs text-gray-500/90 dark:text-gray-400 max-sm:gap-2": true,
+										"flex min-w-0 items-center gap-2 text-xs text-muted-foreground max-sm:gap-2": true,
 										"max-sm:hidden": focused && isVirtualKeyboard(),
 									}}
 								>
@@ -784,13 +783,13 @@
 									onstop?.();
 								}}
 								showBorder={true}
-								classNames="absolute bottom-2 right-2 size-8 sm:size-7 self-end rounded-full border bg-white text-black shadow transition-none dark:border-transparent dark:bg-gray-600 dark:text-white"
+								classNames="absolute bottom-2 right-2 size-8 sm:size-7 self-end rounded-full border border-primary/30 bg-primary text-primary-foreground shadow-glow-pink transition-none"
 							/>
 						{:else}
 							{#if transcriptionEnabled}
 								<button
 									type="button"
-									class="btn absolute bottom-2 right-10 mr-1.5 size-8 self-end rounded-full border bg-white/50 text-gray-500 transition-none hover:bg-gray-50 hover:text-gray-700 dark:border-transparent dark:bg-gray-600/50 dark:text-gray-300 dark:hover:bg-gray-500 dark:hover:text-white sm:right-9 sm:size-7"
+									class="btn absolute bottom-2 right-10 mr-1.5 size-8 self-end rounded-full border border-sidebar-border/70 bg-card/80 text-muted-foreground transition-colors hover:border-primary/40 hover:bg-accent hover:text-primary sm:right-9 sm:size-7"
 									disabled={isReadOnly}
 									onclick={() => {
 										isRecording = true;
@@ -801,10 +800,9 @@
 								</button>
 							{/if}
 							<button
-								class="btn absolute bottom-2 right-2 size-8 self-end rounded-full border bg-white text-black shadow transition-none enabled:hover:bg-white enabled:hover:shadow-inner dark:border-transparent dark:bg-gray-600 dark:text-white dark:hover:enabled:bg-black sm:size-7 {!draft ||
-								isReadOnly
-									? ''
-									: '!bg-black !text-white dark:!bg-white dark:!text-black'}"
+								class="btn absolute bottom-2 right-2 size-8 self-end rounded-full border transition-all sm:size-7 {!draft || isReadOnly
+									? 'border-sidebar-border/70 bg-card/70 text-muted-foreground'
+									: 'border-primary/40 bg-primary text-primary-foreground shadow-glow-pink hover:brightness-105'}"
 								disabled={!draft || isReadOnly}
 								type="submit"
 								aria-label="Send message"

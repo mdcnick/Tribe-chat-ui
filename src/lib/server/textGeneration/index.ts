@@ -10,7 +10,7 @@ import { generate } from "./generate";
 import { runMcpFlow } from "./mcp/runMcpFlow";
 import { mergeAsyncGenerators } from "$lib/utils/mergeAsyncGenerators";
 import type { TextGenerationContext } from "./types";
-
+import { isAbortError } from "$lib/server/mcp/abort";
 async function* keepAlive(done: AbortSignal): AsyncGenerator<MessageUpdate, undefined, undefined> {
 	while (!done.aborted) {
 		yield {
@@ -79,12 +79,7 @@ async function* textGenerationWithoutTitle(
 		// If mcpResult is "completed" or "aborted", don't fall back
 	} catch (err) {
 		// Don't fall back on abort errors - user intentionally stopped
-		const isAbort =
-			ctx.abortController.signal.aborted ||
-			(err instanceof Error &&
-				(err.name === "AbortError" ||
-					err.name === "APIUserAbortError" ||
-					err.message.includes("Request was aborted")));
+		const isAbort = ctx.abortController.signal.aborted || isAbortError(err);
 		const errObj = err as Record<string, unknown>;
 		const statusCode =
 			(typeof errObj.statusCode === "number" ? errObj.statusCode : undefined) ||

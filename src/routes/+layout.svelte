@@ -281,7 +281,7 @@
 <div
 	class="fixed grid h-dvh w-screen grid-cols-1 grid-rows-[auto,1fr] overflow-hidden text-smd {!isNavCollapsed
 		? 'md:grid-cols-[290px,1fr]'
-		: 'md:grid-cols-[0px,1fr]'} transition-[300ms] [transition-property:grid-template-columns] dark:text-gray-300 md:grid-rows-[1fr]"
+		: 'md:grid-cols-[0px,1fr]'} transition-[300ms] [transition-property:grid-template-columns] text-foreground md:grid-rows-[1fr]"
 >
 	<ExpandNavigation
 		isCollapsed={isNavCollapsed}
@@ -313,7 +313,7 @@
 		/>
 	</MobileNav>
 	<nav
-		class="grid max-h-dvh grid-cols-1 grid-rows-[auto,1fr,auto] overflow-hidden *:w-[290px] max-md:hidden"
+		class="grid max-h-dvh grid-cols-1 grid-rows-[auto,1fr,auto] overflow-hidden border-r border-sidebar-border/60 bg-sidebar/95 *:w-[290px] max-md:hidden"
 	>
 		<NavMenu
 			{conversations}

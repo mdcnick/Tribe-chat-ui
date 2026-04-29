@@ -4,141 +4,220 @@
 @tailwind components;
 @tailwind utilities;
 
-html,
-body {
-	overscroll-behavior: none;
-	touch-action: pan-x pan-y;
+@layer base {
+	:root {
+		--background: 0.9289 0.0312 322.5923;
+		--foreground: 0.3257 0.1161 325.0372;
+		--card: 0.9783 0.0125 329.5595;
+		--card-foreground: 0.3257 0.1161 325.0372;
+		--popover: 1.0000 0 0;
+		--popover-foreground: 0.3257 0.1161 325.0372;
+		--primary: 0.5090 0.1429 356.9334;
+		--primary-foreground: 1.0000 0 0;
+		--secondary: 0.9235 0.0212 328.0960;
+		--secondary-foreground: 0.4448 0.1341 324.7991;
+		--muted: 0.9235 0.0212 328.0960;
+		--muted-foreground: 0.4448 0.1341 324.7991;
+		--accent: 0.9235 0.0212 328.0960;
+		--accent-foreground: 0.4948 0.1909 354.5435;
+		--destructive: 0.5013 0.1783 28.7047;
+		--destructive-foreground: 1.0000 0 0;
+		--border: 0.9235 0.0212 328.0960;
+		--input: 0.9235 0.0212 328.0960;
+		--ring: 0.5090 0.1429 356.9334;
+		--chart-1: 0.4948 0.1909 354.5435;
+		--chart-2: 0.5090 0.1429 356.9334;
+		--chart-3: 0.4448 0.1341 324.7991;
+		--chart-4: 0.7239 0.1020 341.7686;
+		--chart-5: 0.5413 0.2466 293.0090;
+		--sidebar: 0.9289 0.0312 322.5923;
+		--sidebar-foreground: 0.3257 0.1161 325.0372;
+		--sidebar-primary: 0.5090 0.1429 356.9334;
+		--sidebar-primary-foreground: 1.0000 0 0;
+		--sidebar-accent: 0.9235 0.0212 328.0960;
+		--sidebar-accent-foreground: 0.4948 0.1909 354.5435;
+		--sidebar-border: 0.9235 0.0212 328.0960;
+		--sidebar-ring: 0.5090 0.1429 356.9334;
+		--font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+		--font-serif: 'Instrument Serif', ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+		--font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+		--radius: 0.5rem;
+		--shadow-x: 0px;
+		--shadow-y: 2px;
+		--shadow-blur: 3px;
+		--shadow-spread: 0px;
+		--shadow-opacity: 0.1;
+		--shadow-color: oklch(0 0 0);
+		--shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+		--shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+		--shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+		--shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+		--shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10);
+		--shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
+		--shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10);
+		--shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+		--tracking-normal: 0em;
+		--spacing: 0.25rem;
+		--shadow-offset-x: 0;
+		--shadow-offset-y: 1px;
+		--letter-spacing: 0em;
+	}
+
+	.dark {
+		--background: 0.2372 0.0219 305.4430;
+		--foreground: 0.9807 0.0041 301.4259;
+		--card: 0.2669 0.0153 302.4247;
+		--card-foreground: 0.9807 0.0041 301.4259;
+		--popover: 0.1905 0.0238 329.8908;
+		--popover-foreground: 0.9807 0.0041 301.4259;
+		--primary: 0.5090 0.1429 356.9334;
+		--primary-foreground: 0.9012 0.0572 343.6936;
+		--secondary: 0.2669 0.0153 302.4247;
+		--secondary-foreground: 0.8803 0.0308 342.6961;
+		--muted: 0.2669 0.0153 302.4247;
+		--muted-foreground: 0.8483 0.0382 307.9613;
+		--accent: 0.3174 0.0303 323.9535;
+		--accent-foreground: 0.9807 0.0041 301.4259;
+		--destructive: 0.3315 0.0886 23.2347;
+		--destructive-foreground: 1.0000 0 0;
+		--border: 0.2669 0.0153 302.4247;
+		--input: 0.2669 0.0153 302.4247;
+		--ring: 0.5090 0.1429 356.9334;
+		--chart-1: 0.5090 0.1429 356.9334;
+		--chart-2: 0.5413 0.2466 293.0090;
+		--chart-3: 0.9012 0.0572 343.6936;
+		--chart-4: 0.8803 0.0308 342.6961;
+		--chart-5: 0.9012 0.0572 343.6936;
+		--sidebar: 0.1905 0.0238 329.8908;
+		--sidebar-foreground: 0.8803 0.0308 342.6961;
+		--sidebar-primary: 0.5090 0.1429 356.9334;
+		--sidebar-primary-foreground: 0.9012 0.0572 343.6936;
+		--sidebar-accent: 0.2669 0.0153 302.4247;
+		--sidebar-accent-foreground: 0.9807 0.0041 301.4259;
+		--sidebar-border: 0.2669 0.0153 302.4247;
+		--sidebar-ring: 0.5090 0.1429 356.9334;
+		--font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+		--font-serif: 'Instrument Serif', ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+		--font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+		--radius: 0.5rem;
+		--shadow-x: 0px;
+		--shadow-y: 4px;
+		--shadow-blur: 3px;
+		--shadow-spread: 0px;
+		--shadow-opacity: 0.1;
+		--shadow-color: oklch(0 0 0);
+		--shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+		--shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+		--shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+		--shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+		--shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10);
+		--shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
+		--shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10);
+		--shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+		--shadow-offset-x: 0;
+		--shadow-offset-y: 1px;
+		--letter-spacing: 0em;
+		--spacing: 0.25rem;
+	}
+  .theme {
+		--font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+		--font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+		--font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+		--radius: 0.5rem;
+		--tracking-tighter: calc(var(--tracking-normal) - 0.05em);
+		--tracking-tight: calc(var(--tracking-normal) - 0.025em);
+		--tracking-wide: calc(var(--tracking-normal) + 0.025em);
+		--tracking-wider: calc(var(--tracking-normal) + 0.05em);
+		--tracking-widest: calc(var(--tracking-normal) + 0.1em);
+	}
+  body {
+    letter-spacing: var(--tracking-normal);
+	}
 }
 
-@layer components {
-	.btn {
-		@apply inline-flex flex-shrink-0 cursor-pointer select-none items-center justify-center whitespace-nowrap outline-none transition-all focus:ring disabled:cursor-default;
+@layer base {
+	* {
+		@apply border-border;
 	}
-
-	.active-model {
-		/* Ensure active border wins over defaults/utilities in both themes */
-		@apply !border-black dark:!border-white/60;
+	body {
+		@apply bg-background text-foreground;
+		font-family: var(--font-sans);
+		font-feature-settings: "ss01", "cv11";
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
 	}
-
-	.file-hoverable {
-		@apply hover:bg-gray-500/10;
+	html {
+		background: oklch(var(--background));
 	}
+}
 
-	.base-tool {
-		@apply flex h-[1.6rem] items-center gap-[.2rem] whitespace-nowrap border border-transparent text-xs outline-none transition-all focus:outline-none active:outline-none dark:hover:text-gray-300 sm:hover:text-purple-600;
+@layer base {
+	body::before {
+		content: "";
+		position: fixed;
+		inset: 0;
+		pointer-events: none;
+		z-index: -1;
+		background:
+			radial-gradient(900px 500px at 12% -10%, oklch(var(--primary) / 0.18), transparent 60%),
+			radial-gradient(700px 420px at 92% 110%, oklch(var(--chart-5) / 0.16), transparent 65%);
 	}
-
-	.active-tool {
-		@apply rounded-full !border-purple-200 bg-purple-100 pl-1 pr-2 text-purple-600 hover:text-purple-600 dark:!border-purple-700 dark:bg-purple-600/40 dark:text-purple-200;
+	.dark body::before {
+		background:
+			radial-gradient(900px 500px at 8% -10%, oklch(var(--primary) / 0.22), transparent 60%),
+			radial-gradient(700px 420px at 96% 110%, oklch(var(--chart-2) / 0.18), transparent 65%);
 	}
 }
 
 @layer utilities {
-	/* your existing utilities */
+	.font-display {
+		font-family: var(--font-serif);
+		font-feature-settings: "liga", "dlig";
+		letter-spacing: -0.01em;
+	}
+
 	.scrollbar-custom {
-		@apply scrollbar-thin scrollbar-track-transparent scrollbar-thumb-black/10 scrollbar-thumb-rounded-full scrollbar-w-1 hover:scrollbar-thumb-black/20 dark:scrollbar-thumb-white/10 dark:hover:scrollbar-thumb-white/20;
+		scrollbar-width: thin;
+		scrollbar-color: oklch(var(--primary) / 0.35) transparent;
 	}
-
 	.scrollbar-custom::-webkit-scrollbar {
-		background-color: transparent;
-		width: 8px;
-		height: 8px;
+		width: 6px;
+		height: 6px;
 	}
-
-	.scrollbar-custom::-webkit-scrollbar-thumb {
-		background-color: rgba(0, 0, 0, 0.1);
-		border-radius: 9999px;
-	}
-
-	.dark .scrollbar-custom::-webkit-scrollbar {
-		background-color: rgba(17, 17, 17, 0.85);
-	}
-
-	.dark .scrollbar-custom::-webkit-scrollbar-thumb {
-		background-color: rgba(255, 255, 255, 0.1);
-	}
-
-	/* Rounded top/bottom caps for vertical scrollbars (Chrome/Edge/Safari) */
 	.scrollbar-custom::-webkit-scrollbar-track {
-		@apply rounded-full bg-clip-padding; /* clip bg to padding so caps look round */
-		/* space for the end caps — tweak with Tailwind spacing */
-		border-top: theme("spacing.2") solid transparent; /* 0.5rem */
-		border-bottom: theme("spacing.2") solid transparent; /* 0.5rem */
+		background: transparent;
+	}
+	.scrollbar-custom::-webkit-scrollbar-thumb {
+		background-color: oklch(var(--primary) / 0.28);
+		border-radius: 999px;
+	}
+	.scrollbar-custom:hover::-webkit-scrollbar-thumb {
+		background-color: oklch(var(--primary) / 0.5);
 	}
 
-	/* Rounded left/right caps for horizontal scrollbars */
-	.scrollbar-custom::-webkit-scrollbar-track:horizontal {
-		@apply rounded-full bg-clip-padding;
-		border-left: theme("spacing.2") solid transparent;
-		border-right: theme("spacing.2") solid transparent;
-		border-top-width: 0;
-		border-bottom-width: 0;
+	.no-scrollbar::-webkit-scrollbar {
+		display: none;
 	}
-
 	.no-scrollbar {
-		@apply [-ms-overflow-style:none] [scrollbar-width:none] [&::-ms-scrollbar]:hidden [&::-webkit-scrollbar]:hidden;
+		-ms-overflow-style: none;
+		scrollbar-width: none;
 	}
 
-	.prose table {
-		@apply block max-w-full overflow-x-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-black/10 scrollbar-thumb-rounded-full scrollbar-w-1 hover:scrollbar-thumb-black/20 dark:scrollbar-thumb-white/10 dark:hover:scrollbar-thumb-white/20;
+	.text-balance {
+		text-wrap: balance;
 	}
 
-	/* .scrollbar-custom {
-		@apply scrollbar-thin scrollbar-track-transparent scrollbar-thumb-black/10 scrollbar-thumb-rounded-full scrollbar-w-1 hover:scrollbar-thumb-black/20 dark:scrollbar-thumb-white/10 dark:hover:scrollbar-thumb-white/20;
-	} */
-	.prose hr {
-		@apply my-4;
+	.t3-grain {
+		position: relative;
 	}
-
-	.prose strong {
-		@apply font-medium;
+	.t3-grain::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		opacity: 0.4;
+		mix-blend-mode: overlay;
+		background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.6 0 0 0 0 0.2 0 0 0 0 0.4 0 0 0 0.18 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+		border-radius: inherit;
 	}
-
-	.prose pre {
-		@apply border-[0.5px] bg-white text-gray-600 dark:border-gray-700 dark:!bg-gray-900 dark:bg-inherit dark:text-inherit;
-	}
-
-	.prose code:not(pre code) {
-		@apply rounded-md bg-gray-200/60 px-[0.4em] py-[0.2em] text-[85%] dark:bg-gray-700;
-	}
-
-	.prose code:not(pre code)::before,
-	.prose code:not(pre code)::after {
-		content: none;
-	}
-
-	/* Override prose-sm title sizes - 75% of original */
-	.prose-sm :where(h1):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
-		font-size: 1.6em; /* 75% */
-		@apply font-semibold;
-	}
-
-	.prose-sm :where(h2):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
-		font-size: 1.07em; /* 75% */
-		@apply font-semibold;
-	}
-
-	.prose-sm :where(h3):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
-		font-size: 0.96em; /* 75% */
-		@apply font-semibold;
-	}
-
-	.prose-sm :where(h4):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
-		font-size: 0.8em; /* 75% */
-		@apply font-semibold;
-	}
-
-	.prose-sm :where(h5):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
-		font-size: 0.75em; /* 75% */
-		@apply font-semibold;
-	}
-
-	.prose-sm :where(h6):not(:where([class~="not-prose"], [class~="not-prose"] *)) {
-		font-size: 0.7em; /* 75% */
-		@apply font-semibold;
-	}
-}
-
-.katex-display {
-	overflow: auto hidden;
 }

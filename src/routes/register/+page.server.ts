@@ -1,60 +1,73 @@
 import { fail, redirect } from "@sveltejs/kit";
+import { registerWithPin } from "$lib/server/pinAuth";
+import { refreshSessionCookie } from "$lib/server/auth";
+import type { Actions, PageServerLoad } from "./$types";
 import { base } from "$app/paths";
 import { loginEnabled } from "$lib/server/auth";
-import { forwardBetterAuthCookies } from "$lib/server/betterAuth";
-import type { Actions, PageServerLoad } from "./$types";
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	if (locals.user) {
 		throw redirect(302, `${base}/`);
 	}
-	return { loginEnabled };
+
+	return {
+		loginEnabled,
+		next: url.searchParams.get("next") || `${base}/`,
+	};
 };
 
 export const actions: Actions = {
-	default: async ({ request, fetch, url, cookies }) => {
-		const data = await request.formData();
-		const name = String(data.get("name") ?? "").trim();
-		const email = String(data.get("email") ?? "").trim();
-		const password = String(data.get("password") ?? "");
+	default: async ({ request, cookies }) => {
+		const formData = await request.formData();
+		const username = (formData.get("username") as string)?.trim().toLowerCase() || undefined;
+		const pin = formData.get("pin") as string;
+		const confirmPin = formData.get("confirmPin") as string;
+		const email = (formData.get("email") as string)?.trim() || undefined;
 
-		if (!name || !email || !password) {
-			return fail(400, { error: "All fields are required.", name, email });
+		if (!pin) {
+			return fail(400, { error: "PIN is required.", username: username ?? "", email: email ?? "" });
 		}
 
-		if (password.length < 8) {
-			return fail(400, { error: "Password must be at least 8 characters.", name, email });
-		}
-
-		if (!loginEnabled) {
-			return fail(503, { error: "Registration is not configured.", name, email });
-		}
-
-		const res = await fetch(`${url.origin}${base}/api/auth/sign-up/email`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({ name, email, password }),
-		});
-
-		if (!res.ok) {
-			const body = await res.json().catch(() => ({}));
-			const msg = (body as { message?: string })?.message ?? "";
-			if (msg.toLowerCase().includes("already") || msg.toLowerCase().includes("exist")) {
-				return fail(409, {
-					error: "An account with this email already exists. Sign in instead.",
-					name,
-					email,
-				});
-			}
-			return fail(res.status >= 400 && res.status < 500 ? res.status : 400, {
-				error: msg || "Could not create account. Please try again.",
-				name,
-				email,
+		if (!/^\d{10}$/.test(pin)) {
+			return fail(400, {
+				error: "PIN must be exactly 10 digits.",
+				username: username ?? "",
+				email: email ?? "",
 			});
 		}
 
-		forwardBetterAuthCookies(cookies, res);
+		if (pin !== confirmPin) {
+			return fail(400, {
+				error: "PINs don't match.",
+				username: username ?? "",
+				email: email ?? "",
+			});
+		}
 
-		throw redirect(302, `${base}/`);
+		if (email) {
+			const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+			if (!emailRegex.test(email)) {
+				return fail(400, { error: "Invalid email format.", username: username ?? "", email });
+			}
+		}
+
+		try {
+			const { secretSessionId, recoveryPhrase } = await registerWithPin({ username, pin, email });
+			refreshSessionCookie(cookies, secretSessionId);
+
+			// Store recovery phrase in session so we can show it once
+			cookies.set("recovery_phrase", recoveryPhrase, {
+				path: "/",
+				httpOnly: true,
+				sameSite: "lax",
+				maxAge: 300, // 5 minutes — only long enough to display once
+			});
+
+			throw redirect(302, `${base}/recovery-phrase`);
+		} catch (err) {
+			if (err && typeof err === "object" && "status" in err) throw err; // re-throw SvelteKit redirects
+			const message = err instanceof Error ? err.message : "Registration failed.";
+			return fail(409, { error: message, username: username ?? "", email: email ?? "" });
+		}
 	},
 };

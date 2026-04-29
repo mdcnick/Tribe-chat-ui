@@ -1,18 +1,13 @@
 import crypto from "crypto";
 import type { RequestEvent } from "@sveltejs/kit";
-import { error, redirect, type Cookies } from "@sveltejs/kit";
+import { redirect, type Cookies } from "@sveltejs/kit";
 import { addWeeks } from "date-fns";
 import { dev } from "$app/environment";
 import { base } from "$app/paths";
 import { ObjectId } from "mongodb";
-import JSON5 from "json5";
 import { z } from "zod";
 import { collections } from "$lib/server/database";
-import { DEFAULT_SETTINGS } from "$lib/types/Settings";
-import { adminTokenManager } from "./adminToken";
-import { betterAuthEnabled, getBetterAuth, mapBetterAuthUser } from "./betterAuth";
 import { config } from "$lib/server/config";
-import { logger } from "$lib/server/logger";
 import type { User } from "$lib/types/User";
 import { sha256 } from "$lib/utils/sha256";
 
@@ -26,25 +21,8 @@ const secure = z
 	.default(!(dev || config.ALLOW_INSECURE_COOKIES === "true"))
 	.parse(config.COOKIE_SECURE === "" ? undefined : config.COOKIE_SECURE === "true");
 
-const sanitizeJSONEnv = (val: string, fallback: string) => {
-	const raw = (val ?? "").trim();
-	const unquoted = raw.startsWith("`") && raw.endsWith("`") ? raw.slice(1, -1) : raw;
-	return unquoted || fallback;
-};
-
-const allowedUserEmails = z
-	.array(z.string().email())
-	.optional()
-	.default([])
-	.parse(JSON5.parse(sanitizeJSONEnv(config.ALLOWED_USER_EMAILS, "[]")));
-
-const allowedUserDomains = z
-	.array(z.string())
-	.optional()
-	.default([])
-	.parse(JSON5.parse(sanitizeJSONEnv(config.ALLOWED_USER_DOMAINS, "[]")));
-
-export const loginEnabled = betterAuthEnabled;
+/** PIN auth is always enabled. loginEnabled is kept as an export for compat. */
+export const loginEnabled = true;
 
 export function sanitizeReturnPath(path: string | undefined | null): string | undefined {
 	if (!path) {
@@ -116,162 +94,95 @@ export const authCondition = (locals: App.Locals) => {
 		: { sessionId: locals.sessionId, userId: { $exists: false } };
 };
 
-function buildAnonymousUserFromTrustedHeader(email: string, sessionId: string): User {
-	return {
-		_id: new ObjectId(sessionId.slice(0, 24)),
-		name: email,
-		email,
-		createdAt: new Date(),
-		updatedAt: new Date(),
-		authProvider: "trusted-header",
-		authSubject: email,
-		hfUserId: email,
-		avatarUrl: "",
-	};
-}
-
-function isAllowedAuthenticatedEmail(email: string | undefined): boolean {
-	if (allowedUserEmails.length === 0 && allowedUserDomains.length === 0) {
-		return true;
-	}
-
-	if (!email) {
-		return false;
-	}
-
-	const domain = email.split("@")[1];
-	return allowedUserEmails.includes(email) || allowedUserDomains.includes(domain);
-}
-
 function getSafeNext(url: URL): string {
 	return sanitizeReturnPath(url.searchParams.get("next")) ?? `${base}/`;
-}
-
-/** Upsert our MongoDB user record for a Better Auth session. Migrates anonymous data on first sign-in. */
-async function syncBetterAuthUser(
-	profile: {
-		authProvider: "better-auth";
-		authSubject: string;
-		email: string;
-		name: string;
-		avatarUrl?: string;
-	},
-	anonymousSessionId: string | undefined
-): Promise<User> {
-	const { authProvider, authSubject, email, name, avatarUrl } = profile;
-	const now = new Date();
-
-	let user = await collections.users.findOne({ authProvider, authSubject });
-	const patch = { email, name, avatarUrl, updatedAt: now, authProvider, authSubject };
-
-	if (user) {
-		await collections.users.updateOne({ _id: user._id }, { $set: patch });
-		user = { ...user, ...patch };
-	} else {
-		const newUser: User = {
-			_id: new ObjectId(),
-			createdAt: now,
-			...patch,
-		};
-		const insert = await collections.users.insertOne(newUser);
-		user = { ...newUser, _id: insert.insertedId };
-	}
-
-	if (anonymousSessionId) {
-		const settingsForUser = await collections.settings.findOne({ userId: user._id });
-		if (!settingsForUser) {
-			const { matchedCount } = await collections.settings.updateOne(
-				{ sessionId: anonymousSessionId },
-				{ $set: { userId: user._id, updatedAt: now }, $unset: { sessionId: "" } }
-			);
-			if (!matchedCount) {
-				await collections.settings.insertOne({
-					userId: user._id,
-					updatedAt: now,
-					createdAt: now,
-					...DEFAULT_SETTINGS,
-				});
-			}
-		}
-
-		const { modifiedCount } = await collections.conversations.updateMany(
-			{ sessionId: anonymousSessionId, userId: { $exists: false } },
-			{ $set: { userId: user._id }, $unset: { sessionId: "" } }
-		);
-		if (modifiedCount > 0) {
-			logger.info(
-				{ userId: user._id.toString(), migratedConversationCount: modifiedCount },
-				"Migrated anonymous conversations to authenticated user"
-			);
-		}
-	}
-
-	return user;
 }
 
 export async function authenticateRequest(
 	request: Request,
 	cookie: Cookies,
-	url: URL,
-	isApi?: boolean
+	_url: URL,
+	_isApi?: boolean
 ): Promise<App.Locals & { secretSessionId: string }> {
 	const token = cookie.get(config.COOKIE_NAME);
 
+	let secretSessionId = token || crypto.randomUUID();
+	let sessionId = await sha256(secretSessionId);
+
+	// Check for trusted header auth (reverse proxy)
 	let email = null;
 	if (config.TRUSTED_EMAIL_HEADER) {
 		email = request.headers.get(config.TRUSTED_EMAIL_HEADER);
 	}
 
-	let secretSessionId = token || crypto.randomUUID();
-	let sessionId = await sha256(secretSessionId);
-
 	if (email) {
+		// Trusted header mode — auto-create user from header
+		const user = await collections.users.findOne({
+			authProvider: "trusted-header",
+			authSubject: email,
+		});
+		if (user) {
+			// Update session
+			await collections.sessions.deleteOne({ sessionId });
+			secretSessionId = crypto.randomUUID();
+			sessionId = await sha256(secretSessionId);
+			refreshSessionCookie(cookie, secretSessionId);
+
+			await collections.sessions.insertOne({
+				_id: new ObjectId(),
+				sessionId,
+				userId: user._id,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+				expiresAt: addWeeks(new Date(), 2),
+			});
+
+			return {
+				user,
+				sessionId,
+				secretSessionId,
+				isAdmin: user.isAdmin ?? false,
+			};
+		}
+
+		// Create user from trusted header
+		const userId = new ObjectId();
+		const newUser: User = {
+			_id: userId,
+			name: email,
+			email,
+			username: email.split("@")[0],
+			avatarUrl: undefined,
+			authProvider: "trusted-header",
+			authSubject: email,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+		await collections.users.insertOne(newUser);
+
+		await collections.sessions.insertOne({
+			_id: new ObjectId(),
+			sessionId,
+			userId,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			expiresAt: addWeeks(new Date(), 2),
+		});
+
 		return {
-			user: buildAnonymousUserFromTrustedHeader(email, sessionId),
+			user: newUser,
 			sessionId,
 			secretSessionId,
-			isAdmin: adminTokenManager.isAdmin(sessionId),
+			isAdmin: false,
 		};
 	}
 
-	if (betterAuthEnabled) {
-		try {
-			const ba = await getBetterAuth();
-			const baSession = await ba.api.getSession({ headers: request.headers });
-
-			if (baSession?.user) {
-				const profile = mapBetterAuthUser(baSession.user);
-
-				if (!isAllowedAuthenticatedEmail(profile.email)) {
-					logger.warn(
-						{ authSubject: profile.authSubject, email: profile.email },
-						"Blocked Better Auth user"
-					);
-					throw error(403, "User not allowed");
-				}
-
-				const anonymousSessionId = token ? await sha256(token) : undefined;
-				const user = await syncBetterAuthUser(profile, anonymousSessionId);
-
-				return {
-					user,
-					sessionId: baSession.session.id,
-					secretSessionId: baSession.session.token,
-					isAdmin: user.isAdmin ?? false,
-				};
-			}
-		} catch (err) {
-			if (err && typeof err === "object" && "status" in err) {
-				throw err;
-			}
-			logger.warn(err, "Failed to validate Better Auth session");
-		}
-	}
-
+	// Existing session cookie — look up user
 	if (token) {
 		const result = await findUser(sessionId, await getCoupledCookieHash(cookie));
 
 		if (result.user) {
+			// Rotate session
 			await collections.sessions.deleteOne({ sessionId });
 			secretSessionId = crypto.randomUUID();
 			sessionId = await sha256(secretSessionId);
@@ -299,10 +210,7 @@ export async function authenticateRequest(
 		}
 	}
 
-	if (isApi && request.headers.get("Authorization")?.startsWith("Bearer ")) {
-		logger.warn("Ignoring deprecated bearer-token auth — Better Auth is the canonical provider");
-	}
-
+	// No auth — anonymous session
 	return {
 		user: undefined,
 		sessionId,
@@ -314,9 +222,4 @@ export async function authenticateRequest(
 export async function triggerLoginFlow({ url }: RequestEvent): Promise<Response> {
 	const next = getSafeNext(url);
 	throw redirect(302, `${base}/login?next=${encodeURIComponent(next)}`);
-}
-
-export async function handleLegacyLoginCallback({ url }: RequestEvent): Promise<Response> {
-	const next = sanitizeReturnPath(url.searchParams.get("next")) ?? `${base}/`;
-	throw redirect(302, next);
 }

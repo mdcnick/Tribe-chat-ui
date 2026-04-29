@@ -10,7 +10,8 @@ export async function preprocessMessages(
 	return Promise.resolve(messages)
 		.then((msgs) => downloadFiles(msgs, convId))
 		.then((msgs) => injectClipboardFiles(msgs))
-		.then(stripEmptyInitialSystemMessage);
+		.then(stripEmptyInitialSystemMessage)
+		.then(stripThinkBlocksFromAssistantMessages);
 }
 
 async function downloadFiles(messages: Message[], convId: ObjectId): Promise<EndpointMessage[]> {
@@ -58,4 +59,16 @@ function stripEmptyInitialSystemMessage(messages: EndpointMessage[]): EndpointMe
 	}
 
 	return messages;
+}
+/**
+ * Strip <think> blocks from assistant messages before sending to the model.
+ * Prevents compounding rambling when models see their own previous reasoning.
+ */
+function stripThinkBlocksFromAssistantMessages(messages: EndpointMessage[]): EndpointMessage[] {
+	return messages.map((message) => {
+		if (message.from !== "assistant") return message;
+		const content = typeof message.content === "string" ? message.content : "";
+		const stripped = content.replace(/<think>[\s\S]*?(?:<\/think>|$)/g, "").trim();
+		return stripped === content ? message : { ...message, content: stripped };
+	});
 }

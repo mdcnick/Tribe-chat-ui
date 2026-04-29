@@ -14,6 +14,7 @@ import {
 import { getClient } from "$lib/server/mcp/clientPool";
 import { attachFileRefsToArgs, type FileRefResolver } from "./fileRefs";
 import type { Client } from "@modelcontextprotocol/sdk/client";
+import { isAbortError } from "$lib/server/mcp/abort";
 
 export type Primitive = string | number | boolean;
 
@@ -292,16 +293,10 @@ export async function* executeToolCalls({
 			});
 		} catch (err) {
 			const errMsg = err instanceof Error ? err.message : String(err);
-			const errName = err instanceof Error ? err.name : "";
-			const isAbortError =
-				abortSignal?.aborted ||
-				errName === "AbortError" ||
-				errName === "APIUserAbortError" ||
-				errMsg === "Request was aborted." ||
-				errMsg === "This operation was aborted";
-			const message = isAbortError ? "Aborted by user" : errMsg;
+			const aborted = isAbortError(err) || abortSignal?.aborted;
+			const message = aborted ? "Aborted by user" : errMsg;
 
-			if (isAbortError) {
+			if (aborted) {
 				logger.debug(
 					{ server: mappingEntry.server, tool: mappingEntry.tool },
 					"[mcp] tool call aborted by user"
